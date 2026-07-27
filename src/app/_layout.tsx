@@ -1,4 +1,4 @@
-//    src/app/_layout.tsx
+// src/app/_layout.tsx
 import { FontAwesome5, MaterialCommunityIcons } from "@expo/vector-icons";
 import { Slot, usePathname, useRouter } from "expo-router";
 import {
@@ -25,16 +25,11 @@ function BarraInferiorFixa() {
   const bottomOffset =
     Platform.OS === "android" ? Math.max(insets.bottom + 16, 24) : 24;
 
+  // 💡 ORDEM DAS ABAS ATUALIZADA AQUI
   const tabs = [
     { key: "/", title: "Início", icon: "home", pack: "fontawesome" },
-    {
-      key: "/prumadas",
-      title: "Prumadas",
-      icon: "building",
-      pack: "fontawesome",
-    },
-    // Lembrete: O arquivo "cargas.tsx" não aparece na estrutura atual. Crie-o na pasta (telas).
     { key: "/cargas", title: "Cargas", icon: "elevator", pack: "material" },
+    { key: "/prumadas", title: "Prumadas", icon: "building", pack: "fontawesome" },
     { key: "/quadro", title: "QGBT", icon: "bolt", pack: "fontawesome" },
   ];
 

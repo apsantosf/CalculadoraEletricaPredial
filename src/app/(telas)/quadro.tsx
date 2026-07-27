@@ -1,31 +1,96 @@
 // src/app/(telas)/quadro.tsx
 import { FontAwesome5 } from "@expo/vector-icons";
-import { Platform, ScrollView, StyleSheet, Text, View } from "react-native";
+import * as Print from "expo-print";
+import { useRouter } from "expo-router";
+import * as Sharing from "expo-sharing";
+import {
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { CardAreaComum } from "../../components/ui/CardAreaComum";
+import { CardPrumada } from "../../components/ui/CardPrumada";
 import CustomHeader from "../../components/ui/CustomHeader";
 import { useData } from "../../context/DataContext";
 import {
   calcularDemandaGlobal,
   calcularDemandaPrumada,
+  calcularDimensionamentoQGBT,
   calcularPotenciaInstaladaTotal,
+  converterParaWatts, // 💡 Importado do motor central
 } from "../../utils/calculations";
-
-// Constantes locais para conversão visual rápida nas Áreas Comuns
-const CV_PARA_W = 736;
-const HP_PARA_W = 746;
+import { gerarHTMLRelatorio } from "../../utils/pdfTemplate";
 
 export default function ScreenQuadro() {
-  const { nomeProjeto, numeroAndares, setores, prumadas } = useData();
+  const { nomeProjeto, numeroAndares, tensao, setores, prumadas } = useData();
+  const router = useRouter();
 
-  // Potência Total Bruta (Sem demanda)
+  const totalApartamentosCadastrados = setores
+    .filter((s) => s.tipoSetor === "Apartamento")
+    .reduce((acc, s) => acc + s.quantidade, 0);
+
+  const totalApartamentosDistribuidos = prumadas.reduce((acc, p) => {
+    return acc + p.unidades.reduce((sum, u) => sum + u.quantidade, 0);
+  }, 0);
+
+  const bloqueioAtivo =
+    totalApartamentosCadastrados > 0 &&
+    totalApartamentosCadastrados !== totalApartamentosDistribuidos;
+
   const potenciaTotal = calcularPotenciaInstaladaTotal(setores);
   const potenciaTotalKw = (potenciaTotal / 1000).toFixed(2);
-
-  // Demanda Global do Prédio (Com Fator de Agrupamento Aplicado)
   const demandaGlobal = calcularDemandaGlobal(prumadas, setores);
   const demandaGlobalKw = (demandaGlobal / 1000).toFixed(2);
-
-  // Filtra as Áreas Comuns (Motores, Bombas, etc)
   const areasComuns = setores.filter((s) => s.tipoSetor === "AreaComum");
+  const dimensionamento = calcularDimensionamentoQGBT(demandaGlobal, tensao);
+
+  const gerarECompartilharPDF = async () => {
+    try {
+      const dataAtual = new Date().toLocaleDateString("pt-BR");
+      const htmlContent = gerarHTMLRelatorio({
+        nomeProjeto,
+        numeroAndares,
+        tensao,
+        potenciaTotalKw,
+        demandaGlobalKw,
+        dimensionamento,
+        prumadas,
+        areasComuns,
+        setores,
+        dataAtual,
+      });
+
+      if (Platform.OS === "web") {
+        const printWindow = window.open("", "_blank");
+        if (printWindow) {
+          printWindow.document.open();
+          printWindow.document.write(htmlContent);
+          printWindow.document.close();
+          setTimeout(() => {
+            printWindow.focus();
+            printWindow.print();
+          }, 250);
+        } else {
+          alert(
+            "O navegador bloqueou a nova aba. Por favor, permita os pop-ups para gerar o PDF.",
+          );
+        }
+      } else {
+        const { uri } = await Print.printToFileAsync({ html: htmlContent });
+        await Sharing.shareAsync(uri, {
+          UTI: ".pdf",
+          mimeType: "application/pdf",
+          dialogTitle: "Compartilhar Relatório Elétrico",
+        });
+      }
+    } catch (error) {
+      console.error("Erro ao gerar PDF:", error);
+      alert("Não foi possível gerar o arquivo PDF.");
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -35,8 +100,33 @@ export default function ScreenQuadro() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        {/* CABEÇALHO DO PROJETO */}
-        <View style={styles.cardResumo}>
+        {bloqueioAtivo && (
+          <View style={styles.alertaBloqueio}>
+            <FontAwesome5
+              name="exclamation-triangle"
+              size={28}
+              color="#dc2626"
+            />
+            <Text style={styles.tituloBloqueio}>Distribuição Incompleta!</Text>
+            <Text style={styles.textoBloqueio}>
+              Você cadastrou {totalApartamentosCadastrados} apartamentos, mas
+              apenas {totalApartamentosDistribuidos} foram alocados nas
+              prumadas. O relatório oficial não pode ser gerado com falhas no
+              balanço de cargas.
+            </Text>
+            <TouchableOpacity
+              style={styles.botaoVoltarPrumadas}
+              onPress={() => router.replace("/prumadas")}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.textoBotaoVoltar}>
+                Voltar e Corrigir Prumadas
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        <View style={[styles.cardResumo, bloqueioAtivo && { opacity: 0.5 }]}>
           <Text style={styles.tituloProjeto}>
             {nomeProjeto || "Projeto Sem Nome"}
           </Text>
@@ -45,10 +135,8 @@ export default function ScreenQuadro() {
               ? `${numeroAndares} Andares/Pavimentos`
               : "Andares não definidos"}
           </Text>
-
           <View style={styles.divisor} />
 
-          {/* DADO SECUNDÁRIO: POTÊNCIA BRUTA */}
           <Text style={styles.labelSecundario}>
             Potência Instalada (Bruta):
           </Text>
@@ -59,17 +147,39 @@ export default function ScreenQuadro() {
 
           <View style={styles.divisorPequeno} />
 
-          {/* DADO PRINCIPAL: DEMANDA GLOBAL (QGBT) */}
           <Text style={styles.labelResultado}>
             Demanda Total do QGBT (Real):
           </Text>
           <Text style={styles.valorResultado}>{demandaGlobalKw} kW</Text>
           <Text style={styles.infoExtra}>
-            *Pronta para dimensionamento do Disjuntor Geral (Cargas + Prumadas).
+            *Base para cálculo de corrente da edificação.
           </Text>
+
+          <View style={styles.boxProtecao}>
+            <Text style={styles.tituloBoxProtecao}>
+              DIMENSIONAMENTO GERAL ({tensao ? `${tensao}V` : "Sem Tensão"})
+            </Text>
+            <View style={styles.linhaProtecao}>
+              <Text style={styles.labelProtecao}>Corrente Calculada:</Text>
+              <Text style={styles.valorProtecao}>
+                {dimensionamento.corrente} A
+              </Text>
+            </View>
+            <View style={styles.linhaProtecao}>
+              <Text style={styles.labelProtecao}>Disjuntor Geral:</Text>
+              <Text style={styles.valorProtecaoDestaque}>
+                {dimensionamento.disjuntor} A
+              </Text>
+            </View>
+            <View style={styles.linhaProtecao}>
+              <Text style={styles.labelProtecao}>Cabo Principal:</Text>
+              <Text style={styles.valorProtecaoDestaque}>
+                {dimensionamento.cabo}
+              </Text>
+            </View>
+          </View>
         </View>
 
-        {/* DETALHAMENTO DE PRUMADAS */}
         <Text style={styles.sectionTitle}>Distribuição por Prumadas</Text>
         {prumadas.length === 0 ? (
           <Text style={styles.textoVazio}>Nenhuma prumada configurada.</Text>
@@ -78,29 +188,16 @@ export default function ScreenQuadro() {
             const demandaPrumadaKw = (
               calcularDemandaPrumada(prumada, setores) / 1000
             ).toFixed(2);
-
             return (
-              <View key={prumada.id} style={styles.cardItem}>
-                <View style={styles.cardHeader}>
-                  <FontAwesome5 name="building" size={18} color="#8b5cf6" />
-                  <Text style={styles.itemNome}>{prumada.nome}</Text>
-                </View>
-                <View style={styles.divisorPequeno} />
-                {prumada.unidades.map((u, index) => (
-                  <Text key={index} style={styles.itemDetalhe}>
-                    • {u.quantidade}x {u.nomeSetor}
-                  </Text>
-                ))}
-
-                <Text style={styles.itemPotencia}>
-                  Demanda Real (NBR 5410): {demandaPrumadaKw} kW
-                </Text>
-              </View>
+              <CardPrumada
+                key={prumada.id}
+                prumada={prumada}
+                demandaKw={demandaPrumadaKw}
+              />
             );
           })
         )}
 
-        {/* DETALHAMENTO DE ÁREAS COMUNS (MOTORES/GERAL) */}
         <Text style={styles.sectionTitle}>Serviços Gerais / Áreas Comuns</Text>
         {areasComuns.length === 0 ? (
           <Text style={styles.textoVazio}>
@@ -108,37 +205,29 @@ export default function ScreenQuadro() {
           </Text>
         ) : (
           areasComuns.map((area) => {
-            // Calcula a potência deste item comum em kW para o painel
             let potW = 0;
             area.cargas.forEach((c) => {
-              let p = c.potencia;
-              if (c.unidadeMedida === "CV") p *= CV_PARA_W;
-              if (c.unidadeMedida === "HP") p *= HP_PARA_W;
+              // 💡 Substituído pelo conversor universal centralizado
+              let p = converterParaWatts(c.potencia, c.unidadeMedida);
               potW += p * c.quantidade;
             });
             const potKw = ((potW * area.quantidade) / 1000).toFixed(2);
-
-            return (
-              <View
-                key={area.id}
-                style={[styles.cardItem, { borderLeftColor: "#10b981" }]}
-              >
-                <View style={styles.cardHeader}>
-                  <FontAwesome5 name="cogs" size={16} color="#10b981" />
-                  <Text style={styles.itemNome}>
-                    {area.quantidade}x {area.nome}
-                  </Text>
-                </View>
-                <Text style={styles.itemPotenciaSecundaria}>
-                  Potência: {potKw} kW
-                </Text>
-              </View>
-            );
+            return <CardAreaComum key={area.id} area={area} potKw={potKw} />;
           })
         )}
 
-        {/* ESPAÇO PARA O BOTÃO DO PDF (FUTURO) */}
-        <View style={{ height: 40 }} />
+        {!bloqueioAtivo ? (
+          <TouchableOpacity
+            style={styles.botaoPdf}
+            onPress={gerarECompartilharPDF}
+            activeOpacity={0.8}
+          >
+            <FontAwesome5 name="file-pdf" size={20} color="#ffffff" />
+            <Text style={styles.textoBotaoPdf}>Gerar Relatório em PDF</Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={{ height: 40 }} />
+        )}
       </ScrollView>
     </View>
   );
@@ -153,6 +242,40 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     paddingBottom: 100,
   },
+  alertaBloqueio: {
+    backgroundColor: "#fef2f2",
+    borderWidth: 2,
+    borderColor: "#fecaca",
+    borderRadius: 12,
+    padding: 20,
+    alignItems: "center",
+    marginBottom: 24,
+    ...Platform.select({
+      web: { boxShadow: "0px 4px 6px rgba(220, 38, 38, 0.15)" },
+      default: { elevation: 5 },
+    }),
+  },
+  tituloBloqueio: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#991b1b",
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  textoBloqueio: {
+    fontSize: 14,
+    color: "#b91c1c",
+    textAlign: "center",
+    marginBottom: 16,
+    lineHeight: 20,
+  },
+  botaoVoltarPrumadas: {
+    backgroundColor: "#ef4444",
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+  },
+  textoBotaoVoltar: { color: "#ffffff", fontWeight: "bold", fontSize: 14 },
   cardResumo: {
     backgroundColor: "#ffffff",
     padding: 24,
@@ -218,6 +341,33 @@ const styles = StyleSheet.create({
     marginTop: 16,
     fontStyle: "italic",
   },
+  boxProtecao: {
+    backgroundColor: "#eff6ff",
+    borderWidth: 1,
+    borderColor: "#bfdbfe",
+    borderRadius: 8,
+    padding: 16,
+    width: "100%",
+    marginTop: 20,
+  },
+  tituloBoxProtecao: {
+    fontSize: 13,
+    fontWeight: "bold",
+    color: "#1e40af",
+    textAlign: "center",
+    marginBottom: 12,
+  },
+  linhaProtecao: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: "#dbeafe",
+  },
+  labelProtecao: { fontSize: 14, color: "#3b82f6", fontWeight: "600" },
+  valorProtecao: { fontSize: 15, color: "#1e3a8a", fontWeight: "bold" },
+  valorProtecaoDestaque: { fontSize: 16, color: "#dc2626", fontWeight: "bold" },
   sectionTitle: {
     fontSize: 18,
     fontWeight: "bold",
@@ -226,33 +376,20 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   textoVazio: { color: "#6b7280", fontStyle: "italic", marginBottom: 20 },
-  cardItem: {
-    backgroundColor: "#ffffff",
+  botaoPdf: {
+    backgroundColor: "#2563eb",
     padding: 16,
     borderRadius: 8,
-    marginBottom: 12,
-    borderLeftWidth: 4,
-    borderLeftColor: "#8b5cf6",
-    ...Platform.select({
-      web: { boxShadow: "0px 1px 3px rgba(0,0,0,0.1)" },
-      default: { elevation: 2 },
-    }),
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 20,
+    marginBottom: 40,
   },
-  cardHeader: { flexDirection: "row", alignItems: "center", gap: 10 },
-  itemNome: { fontSize: 16, fontWeight: "bold", color: "#1f2937" },
-  itemDetalhe: { fontSize: 14, color: "#4b5563", marginTop: 4 },
-  itemPotencia: {
-    fontSize: 15,
+  textoBotaoPdf: {
+    color: "#ffffff",
+    fontSize: 16,
     fontWeight: "bold",
-    color: "#8b5cf6",
-    marginTop: 10,
-    textAlign: "right",
-  },
-  itemPotenciaSecundaria: {
-    fontSize: 14,
-    fontWeight: "bold",
-    color: "#10b981",
-    marginTop: 8,
-    textAlign: "right",
+    marginLeft: 10,
   },
 });

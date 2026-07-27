@@ -1,7 +1,9 @@
-//    src/app/(telas)/prumadas
+// src/app/(telas)/prumadas.tsx
 import { FontAwesome5 } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
+  Alert,
   Platform,
   ScrollView,
   StyleSheet,
@@ -15,8 +17,8 @@ import { useData } from "../../context/DataContext";
 import { Prumada, UnidadePrumada } from "../../utils/templates";
 
 export default function ScreenPrumadas() {
-  // ATUALIZADO: Usando prumadasDispatch para salvar no AsyncStorage automaticamente
   const { setores, prumadas, prumadasDispatch } = useData();
+  const router = useRouter();
 
   const apartamentosDisponiveis = setores.filter(
     (s) => s.tipoSetor === "Apartamento",
@@ -24,7 +26,23 @@ export default function ScreenPrumadas() {
 
   const [nomePrumada, setNomePrumada] = useState("");
   const [setorSelecionado, setSetorSelecionado] = useState<string | null>(null);
-  const [quantidadeNaPrumada, setQuantidadeNaPrumada] = useState("1");
+  const [quantidadeNaPrumada, setQuantidadeNaPrumada] = useState("");
+
+  // 💡 LÓGICA DE SALDO: Calcula quantos apartamentos faltam ser distribuídos
+  const saldos = apartamentosDisponiveis.map((apto) => {
+    const totalAlocado = prumadas.reduce((acc, prumada) => {
+      const unidade = prumada.unidades.find((u) => u.setorId === apto.id);
+      return acc + (unidade ? unidade.quantidade : 0);
+    }, 0);
+    return {
+      ...apto,
+      saldo: apto.quantidade - totalAlocado,
+    };
+  });
+
+  // Verifica se todos os apartamentos cadastrados já foram 100% alocados
+  const todosAlocados = saldos.length > 0 && saldos.every((s) => s.saldo === 0);
+  const setorSelecionadoDados = saldos.find((s) => s.id === setorSelecionado);
 
   const handleSalvarPrumada = () => {
     if (!nomePrumada || !setorSelecionado || !quantidadeNaPrumada) {
@@ -34,15 +52,24 @@ export default function ScreenPrumadas() {
       return;
     }
 
-    const setor = apartamentosDisponiveis.find(
-      (s) => s.id === setorSelecionado,
-    );
-    if (!setor) return;
+    const qtd = parseInt(quantidadeNaPrumada);
+    if (isNaN(qtd) || qtd <= 0) {
+      const msg = "Informe uma quantidade válida maior que zero.";
+      Platform.OS === "web" ? window.alert(msg) : alert(msg);
+      return;
+    }
+
+    // 💡 TRAVA DE SEGURANÇA: Impede alocar mais do que existe no prédio
+    if (setorSelecionadoDados && qtd > setorSelecionadoDados.saldo) {
+      const msg = `Erro: Você só tem mais ${setorSelecionadoDados.saldo}x "${setorSelecionadoDados.nome}" disponíveis para alocar.`;
+      Platform.OS === "web" ? window.alert(msg) : alert(msg);
+      return;
+    }
 
     const novaUnidade: UnidadePrumada = {
-      setorId: setor.id,
-      nomeSetor: setor.nome,
-      quantidade: parseInt(quantidadeNaPrumada) || 1,
+      setorId: setorSelecionadoDados!.id,
+      nomeSetor: setorSelecionadoDados!.nome,
+      quantidade: qtd,
     };
 
     const novaPrumada: Prumada = {
@@ -51,17 +78,30 @@ export default function ScreenPrumadas() {
       unidades: [novaUnidade],
     };
 
-    // ATUALIZADO: Agora salva a lista completa disparando a nova função
     prumadasDispatch([...prumadas, novaPrumada]);
-
     setNomePrumada("");
     setSetorSelecionado(null);
-    setQuantidadeNaPrumada("1");
+    setQuantidadeNaPrumada("");
   };
 
-  // ATUALIZADO: Função para remover uma prumada
   const removerPrumada = (id: string) => {
     prumadasDispatch(prumadas.filter((p) => p.id !== id));
+  };
+
+  const confirmarRemocao = (id: string, nome: string) => {
+    const msg = `Tem certeza que deseja remover a prumada "${nome}"? A quantidade voltará para o saldo disponível.`;
+    if (Platform.OS === "web") {
+      if (window.confirm(msg)) removerPrumada(id);
+    } else {
+      Alert.alert("Confirmar Exclusão", msg, [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Remover",
+          style: "destructive",
+          onPress: () => removerPrumada(id),
+        },
+      ]);
+    }
   };
 
   return (
@@ -80,36 +120,47 @@ export default function ScreenPrumadas() {
             style={styles.input}
             value={nomePrumada}
             onChangeText={setNomePrumada}
-            placeholder="Ex: Prumada A - Lado Esquerdo"
+            placeholder="Ex: Prumada Leste"
             placeholderTextColor="#9ca3af"
           />
 
-          <Text style={styles.label}>Selecione o Tipo de Apartamento</Text>
+          <Text style={styles.label}>
+            Selecione a Unidade (Saldo Disponível)
+          </Text>
           {apartamentosDisponiveis.length === 0 ? (
             <Text style={styles.textoAviso}>
               Vá na tela de "Cargas" e cadastre apartamentos primeiro.
             </Text>
           ) : (
             <View style={styles.chipsContainer}>
-              {apartamentosDisponiveis.map((apto) => (
-                <TouchableOpacity
-                  key={apto.id}
-                  style={[
-                    styles.chip,
-                    setorSelecionado === apto.id && styles.chipActive,
-                  ]}
-                  onPress={() => setSetorSelecionado(apto.id)}
-                >
-                  <Text
+              {saldos.map((apto) => {
+                const esgotado = apto.saldo === 0;
+                const isSelected = setorSelecionado === apto.id;
+
+                return (
+                  <TouchableOpacity
+                    key={apto.id}
                     style={[
-                      styles.chipText,
-                      setorSelecionado === apto.id && styles.chipTextActive,
+                      styles.chip,
+                      isSelected && styles.chipActive,
+                      esgotado && !isSelected && styles.chipEsgotado,
                     ]}
+                    onPress={() => !esgotado && setSetorSelecionado(apto.id)}
+                    activeOpacity={0.7}
+                    disabled={esgotado}
                   >
-                    {apto.nome}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+                    <Text
+                      style={[
+                        styles.chipText,
+                        isSelected && styles.chipTextActive,
+                        esgotado && !isSelected && styles.chipTextEsgotado,
+                      ]}
+                    >
+                      {apto.nome} (Faltam {apto.saldo})
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           )}
 
@@ -119,18 +170,24 @@ export default function ScreenPrumadas() {
             value={quantidadeNaPrumada}
             onChangeText={setQuantidadeNaPrumada}
             keyboardType="numeric"
-            placeholder="Ex: 18"
+            placeholder={
+              setorSelecionadoDados
+                ? `Max: ${setorSelecionadoDados.saldo}`
+                : "Ex: 10"
+            }
             placeholderTextColor="#9ca3af"
+            editable={
+              !!setorSelecionadoDados && setorSelecionadoDados.saldo > 0
+            }
           />
 
           <TouchableOpacity
             style={[
               styles.botaoSalvar,
-              apartamentosDisponiveis.length === 0 && { opacity: 0.5 },
+              (!setorSelecionado || !quantidadeNaPrumada) && { opacity: 0.5 },
             ]}
             onPress={handleSalvarPrumada}
             activeOpacity={0.8}
-            disabled={apartamentosDisponiveis.length === 0}
           >
             <Text style={styles.textoBotaoSalvar}>Adicionar Prumada</Text>
           </TouchableOpacity>
@@ -152,15 +209,44 @@ export default function ScreenPrumadas() {
                     </Text>
                   ))}
                 </View>
-
                 <TouchableOpacity
                   style={styles.botaoExcluir}
-                  onPress={() => removerPrumada(prumada.id)}
+                  onPress={() => confirmarRemocao(prumada.id, prumada.nome)}
                 >
                   <FontAwesome5 name="trash" size={16} color="#ef4444" />
                 </TouchableOpacity>
               </View>
             ))
+          )}
+        </View>
+
+        {/* 💡 NOVO: BOTÃO DE FINALIZAÇÃO CONDICIONAL */}
+        <View style={styles.finalizacaoContainer}>
+          <TouchableOpacity
+            style={[
+              styles.botaoFinalizar,
+              !todosAlocados && styles.botaoFinalizarDesabilitado,
+            ]}
+            disabled={!todosAlocados}
+            onPress={() => router.replace("/quadro")}
+            activeOpacity={0.8}
+          >
+            <FontAwesome5
+              name={todosAlocados ? "check-circle" : "lock"}
+              size={20}
+              color="#ffffff"
+            />
+            <Text style={styles.textoBotaoFinalizar}>
+              {todosAlocados
+                ? "Finalizar Distribuição"
+                : "Distribuição Incompleta"}
+            </Text>
+          </TouchableOpacity>
+
+          {!todosAlocados && apartamentosDisponiveis.length > 0 && (
+            <Text style={styles.textoAjudaFinalizar}>
+              Alóque todas as unidades pendentes para liberar o Relatório QGBT.
+            </Text>
           )}
         </View>
       </ScrollView>
@@ -227,10 +313,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     backgroundColor: "#e5e7eb",
     borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "transparent",
   },
-  chipActive: { backgroundColor: "#2563eb" },
+  chipActive: { backgroundColor: "#eff6ff", borderColor: "#2563eb" },
+  chipEsgotado: {
+    backgroundColor: "#f3f4f6",
+    opacity: 0.6,
+    borderColor: "#d1d5db",
+  },
   chipText: { color: "#4b5563", fontSize: 13, fontWeight: "bold" },
-  chipTextActive: { color: "#ffffff" },
+  chipTextActive: { color: "#2563eb" },
+  chipTextEsgotado: { color: "#9ca3af", textDecorationLine: "line-through" },
   botaoSalvar: {
     backgroundColor: "#8b5cf6",
     padding: 14,
@@ -272,4 +366,30 @@ const styles = StyleSheet.create({
   },
   itemDetalhe: { fontSize: 14, color: "#6b7280" },
   botaoExcluir: { padding: 10 },
+
+  /* ESTILOS DO BOTÃO FINALIZAR */
+  finalizacaoContainer: {
+    marginTop: 30,
+    marginBottom: 20,
+    alignItems: "center",
+  },
+  botaoFinalizar: {
+    backgroundColor: "#10b981",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 16,
+    borderRadius: 8,
+    width: "100%",
+    gap: 10,
+  },
+  botaoFinalizarDesabilitado: { backgroundColor: "#9ca3af" },
+  textoBotaoFinalizar: { color: "#ffffff", fontSize: 16, fontWeight: "bold" },
+  textoAjudaFinalizar: {
+    color: "#ef4444",
+    fontSize: 12,
+    marginTop: 8,
+    textAlign: "center",
+    fontStyle: "italic",
+  },
 });

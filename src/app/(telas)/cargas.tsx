@@ -1,7 +1,8 @@
-//   src/app/(telas)/cargas.tsx
+// src/app/(telas)/cargas.tsx
 import { FontAwesome5 } from "@expo/vector-icons";
 import { useState } from "react";
 import {
+  Alert,
   Platform,
   ScrollView,
   StyleSheet,
@@ -16,18 +17,16 @@ import { useData } from "../../context/DataContext";
 import { Carga, Setor } from "../../utils/templates";
 
 export default function ScreenCargas() {
-  // Agora usamos o setoresDispatch para garantir o salvamento no SQLite
-  const { setores, setoresDispatch } = useData();
+  // 💡 ATUALIZADO: Agora puxamos também as 'prumadas' para fazer a validação
+  const { setores, setoresDispatch, prumadas } = useData();
   const [abaAtiva, setAbaAtiva] = useState<"unidades" | "comum">("unidades");
 
-  // Handler para salvar os Apartamentos
   const handleSalvarUnidade = (novoSetor: Setor) => {
     setoresDispatch([...setores, novoSetor]);
     const msg = `${novoSetor.quantidade}x ${novoSetor.nome} adicionado(s) com sucesso!`;
     Platform.OS === "web" ? window.alert(msg) : alert(msg);
   };
 
-  // Handler para salvar Motores/Áreas Comuns
   const handleSalvarMotor = (carga: Omit<Carga, "id" | "tipo">) => {
     const novaCarga: Carga = {
       ...carga,
@@ -48,16 +47,47 @@ export default function ScreenCargas() {
     Platform.OS === "web" ? window.alert(msg) : alert(msg);
   };
 
-  // Função para remover um setor e salvar a nova lista no SQLite
   const removerItem = (id: string) => {
     setoresDispatch(setores.filter((s) => s.id !== id));
+  };
+
+  // 💡 NOVO: Função com trava de segurança para não excluir carga em uso
+  const confirmarRemocao = (id: string, nome: string) => {
+    // Verifica se a carga está sendo usada em alguma prumada
+    const cargaEmUso = prumadas.some((prumada) =>
+      prumada.unidades.some((u) => u.setorId === id),
+    );
+
+    if (cargaEmUso) {
+      const msgErro = `Ação bloqueada! A unidade "${nome}" já está vinculada a uma prumada. Vá até a aba "Prumadas" e exclua a distribuição correspondente antes de apagar esta carga.`;
+      if (Platform.OS === "web") {
+        window.alert(msgErro);
+      } else {
+        Alert.alert("Unidade em Uso", msgErro);
+      }
+      return; // Para a execução aqui e não deixa excluir
+    }
+
+    // Se não estiver em uso, segue com a confirmação normal
+    const msg = `Tem certeza que deseja remover "${nome}"?`;
+    if (Platform.OS === "web") {
+      if (window.confirm(msg)) removerItem(id);
+    } else {
+      Alert.alert("Confirmar Exclusão", msg, [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Remover",
+          style: "destructive",
+          onPress: () => removerItem(id),
+        },
+      ]);
+    }
   };
 
   return (
     <View style={styles.container}>
       <CustomHeader title="Gestão de Cargas" />
 
-      {/* Seletor de Abas */}
       <View style={styles.tabsContainer}>
         <TouchableOpacity
           style={[
@@ -142,7 +172,7 @@ export default function ScreenCargas() {
 
                 <TouchableOpacity
                   style={styles.botaoExcluir}
-                  onPress={() => removerItem(setor.id)}
+                  onPress={() => confirmarRemocao(setor.id, setor.nome)}
                 >
                   <FontAwesome5 name="trash" size={16} color="#ef4444" />
                 </TouchableOpacity>

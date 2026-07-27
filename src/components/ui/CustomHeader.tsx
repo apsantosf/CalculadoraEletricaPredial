@@ -19,20 +19,21 @@ interface CustomHeaderProps {
 }
 
 export default function CustomHeader({ title }: CustomHeaderProps) {
-  const { zerarProjeto, tensaoGeral } = useData();
+  // 💡 Correção: 'tensaoGeral' agora se chama apenas 'tensao' no DataContext atualizado
+  const { novoProjeto, tensao } = useData();
   const appVersion = Constants.expoConfig?.version || "1.0.0";
 
   // Controle de exibição do nosso Modal Customizado
   const [modalVisible, setModalVisible] = useState(false);
 
   const handleNovoProjeto = () => {
-    zerarProjeto();
+    novoProjeto(); // 💡 Atualizado de zerarProjeto para novoProjeto
     setModalVisible(false);
     router.replace("/");
   };
 
   const handleSairDoApp = () => {
-    zerarProjeto(); // Limpa os dados primeiro
+    novoProjeto(); // 💡 Atualizado aqui também
     setModalVisible(false);
 
     if (Platform.OS === "android") {
@@ -61,7 +62,9 @@ export default function CustomHeader({ title }: CustomHeaderProps) {
       {/* Lado Direito: Badge Voltagem, Versão e Botão X */}
       <View style={styles.rightContainer}>
         <View style={styles.badgeTensao}>
-          <Text style={styles.textoBadgeTensao}>⚡ {tensaoGeral}V</Text>
+          <Text style={styles.textoBadgeTensao}>
+            ⚡ {tensao ? `${tensao}V` : "N/A"}
+          </Text>
         </View>
 
         <Text style={styles.versionText}>v{appVersion}</Text>
@@ -169,7 +172,7 @@ const styles = StyleSheet.create({
   // 💡 ESTILOS DO MODAL CUSTOMIZADO
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.6)", // Fundo escuro transparente
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
     justifyContent: "center",
     alignItems: "center",
   },
@@ -179,11 +182,10 @@ const styles = StyleSheet.create({
     backgroundColor: "#ffffff",
     borderRadius: 12,
     padding: 24,
-    elevation: 5, // Sombra no Android
-    shadowColor: "#000", // Sombra no iOS/Web
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
+    ...Platform.select({
+      web: { boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.25)" },
+      default: { elevation: 5 },
+    }),
   },
   modalTitle: {
     fontSize: 20,
