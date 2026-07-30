@@ -1,4 +1,3 @@
-// src/components/ui/ModalDimensionamentoApto.tsx
 import { FontAwesome5 } from "@expo/vector-icons";
 import { Picker } from "@react-native-picker/picker";
 import { useEffect, useState } from "react";
@@ -57,10 +56,8 @@ export default function ModalDimensionamentoApto({
   dadosIniciais,
 }: ModalProps) {
   const [abaAtiva, setAbaAtiva] = useState<"comodos" | "tues">("comodos");
-
   const [comodos, setComodos] = useState<ComodoPlanta[]>([]);
   const [tues, setTues] = useState<TuePlanta[]>([]);
-
   const [nomeTipologia, setNomeTipologia] = useState("Apto Tipo 1");
   const [quantidadeTipologia, setQuantidadeTipologia] = useState("1");
 
@@ -112,13 +109,11 @@ export default function ModalDimensionamentoApto({
   const handleAddComodo = () => {
     const numArea = parseFloat(area.replace(",", "."));
     const numPerim = parseFloat(perimetro.replace(",", "."));
-
     if (!nomeComodo.trim() || isNaN(numArea) || isNaN(numPerim)) {
       const msg = "Preencha a área e o perímetro corretamente.";
       Platform.OS === "web" ? window.alert(msg) : Alert.alert("Atenção", msg);
       return;
     }
-
     setComodos((prev) => [
       ...prev,
       {
@@ -140,14 +135,12 @@ export default function ModalDimensionamentoApto({
       Platform.OS === "web" ? window.alert(msg) : Alert.alert("Atenção", msg);
       return;
     }
-
     setTues((prev) => [
       ...prev,
       { id: Math.random().toString(), nome: nomeTue, potenciaW: pot },
     ]);
   };
 
-  // 💡 LÓGICA NOVA: Confirmação de exclusão dentro do Modal
   const confirmarRemocaoComodo = (id: string, nome: string) => {
     const msg = `Tem certeza que deseja remover o cômodo "${nome}"?`;
     if (Platform.OS === "web") {
@@ -187,17 +180,14 @@ export default function ModalDimensionamentoApto({
       Platform.OS === "web" ? window.alert(msg) : Alert.alert("Atenção", msg);
       return;
     }
-
     const qtd = parseInt(quantidadeTipologia) || 1;
     const nome = nomeTipologia.trim() || "Apto Dimensionado";
-
     const cargasCalculadas = calcularDemandaApartamento(comodos, tues);
     onSalvar(cargasCalculadas, nome, qtd, comodos, tues);
     onClose();
   };
 
   const isDesativado = comodos.length === 0 && tues.length === 0;
-
   const comodosOrdenados = [...comodos].sort((a, b) =>
     a.nome.localeCompare(b.nome, "pt-BR"),
   );
@@ -295,6 +285,7 @@ export default function ModalDimensionamentoApto({
                   </View>
                 </View>
 
+                {/* 💡 ESTE BOTÃO TAMBÉM VOLTOU */}
                 <TouchableOpacity
                   style={styles.btnAdd}
                   onPress={handleAddComodo}
@@ -307,7 +298,6 @@ export default function ModalDimensionamentoApto({
                     <Text style={styles.itemText}>
                       🏠 {item.nome} ({item.area}m²)
                     </Text>
-                    {/* 💡 AQUI AGORA PEDE CONFIRMAÇÃO */}
                     <TouchableOpacity
                       onPress={() => confirmarRemocaoComodo(item.id, item.nome)}
                     >
@@ -355,6 +345,7 @@ export default function ModalDimensionamentoApto({
                   </View>
                 </View>
 
+                {/* 💡 ESTE AQUI TAMBÉM */}
                 <TouchableOpacity style={styles.btnAdd} onPress={handleAddTue}>
                   <Text style={styles.btnAddText}>+ Adicionar TUE</Text>
                 </TouchableOpacity>
@@ -364,7 +355,6 @@ export default function ModalDimensionamentoApto({
                     <Text style={styles.itemText}>
                       ⚡ {item.nome} ({item.potenciaW} W)
                     </Text>
-                    {/* 💡 AQUI AGORA PEDE CONFIRMAÇÃO */}
                     <TouchableOpacity
                       onPress={() => confirmarRemocaoTue(item.id, item.nome)}
                     >
@@ -398,6 +388,7 @@ export default function ModalDimensionamentoApto({
               </View>
             </View>
 
+            {/* 💡 BOTÃO FINAL RESTAURADO */}
             <TouchableOpacity
               style={[
                 styles.btnFinalizar,
@@ -492,16 +483,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   picker: { height: 55, color: "#1f2937", backgroundColor: "transparent" },
-  btnAdd: {
-    backgroundColor: "#f3f4f6",
-    borderWidth: 1,
-    borderColor: "#d1d5db",
-    padding: 12,
-    borderRadius: 8,
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  btnAddText: { color: "#4b5563", fontWeight: "bold", fontSize: 14 },
   listItem: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -534,6 +515,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "bold",
   },
+
+  // 💡 ESTILOS DOS BOTÕES RESTAURADOS AQUI EMBAIXO:
+  btnAdd: {
+    backgroundColor: "#f3f4f6",
+    borderWidth: 1,
+    borderColor: "#d1d5db",
+    padding: 12,
+    borderRadius: 8,
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  btnAddText: { color: "#4b5563", fontWeight: "bold", fontSize: 14 },
   btnFinalizar: {
     backgroundColor: "#059669",
     padding: 14,

@@ -1,4 +1,3 @@
-// src/components/ui/FormMotores.tsx
 import { Picker } from "@react-native-picker/picker";
 import { useState } from "react";
 import {
@@ -30,7 +29,6 @@ export default function FormMotores({ onSalvar }: Props) {
   const [sugestaoSelecionada, setSugestaoSelecionada] = useState(
     SUGESTOES_MOTORES[0].label,
   );
-
   const [nome, setNome] = useState("");
   const [potencia, setPotencia] = useState("");
   const [unidadeMedida, setUnidadeMedida] = useState<"CV" | "HP" | "W" | "kW">(
@@ -63,7 +61,6 @@ export default function FormMotores({ onSalvar }: Props) {
       return;
     }
 
-    // Como os motores agrupam em "Serviços Gerais", mandamos a quantidade já embutida na carga se o usuário preencheu mais de 1
     for (let i = 0; i < qtd; i++) {
       onSalvar({
         nome: qtd > 1 ? `${nome} (Unidade ${i + 1})` : nome,
@@ -81,7 +78,6 @@ export default function FormMotores({ onSalvar }: Props) {
 
   return (
     <View style={styles.container}>
-      {/* 💡 PICKER DE SUGESTÕES */}
       <Text style={styles.label}>Sugestões de Áreas Comuns</Text>
       <View style={styles.pickerContainer}>
         <Picker
@@ -152,6 +148,7 @@ export default function FormMotores({ onSalvar }: Props) {
         </View>
       </View>
 
+      {/* 💡 O BOTÃO VOLTOU A TER ESTILO! */}
       <TouchableOpacity style={styles.btnSalvar} onPress={handleSalvar}>
         <Text style={styles.btnSalvarText}>Adicionar à Área Comum</Text>
       </TouchableOpacity>
@@ -204,5 +201,14 @@ const styles = StyleSheet.create({
   },
   picker: { height: 55, color: "#1f2937", backgroundColor: "transparent" },
   pickerSmall: { height: 55, color: "#1f2937", backgroundColor: "transparent" },
+
+  // 💡 ESTILOS DO BOTÃO RESTAURADOS AQUI
+  btnSalvar: {
+    backgroundColor: "#4f46e5",
+    padding: 14,
+    borderRadius: 8,
+    alignItems: "center",
+    marginTop: 4,
+  },
   btnSalvarText: { color: "#fff", fontWeight: "bold", fontSize: 16 },
 });

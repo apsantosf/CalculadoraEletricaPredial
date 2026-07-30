@@ -1,4 +1,3 @@
-// src/components/ui/FormPrevisaoCarga.tsx
 import { FontAwesome5 } from "@expo/vector-icons";
 import { Picker } from "@react-native-picker/picker";
 import { useState } from "react";
@@ -141,7 +140,6 @@ export default function FormPrevisaoCarga({ onSalvar }: Props) {
         2. Composição de Cargas (Adicione os Itens)
       </Text>
 
-      {/* 💡 PICKER DE SUGESTÕES */}
       <Text style={styles.label}>Sugestões Rápidas</Text>
       <View style={styles.pickerContainer}>
         <Picker
@@ -177,6 +175,7 @@ export default function FormPrevisaoCarga({ onSalvar }: Props) {
         </View>
       </View>
 
+      {/* 💡 ESTE BOTÃO ESTAVA INVISÍVEL */}
       <TouchableOpacity style={styles.btnAddCarga} onPress={handleAddCarga}>
         <Text style={styles.btnAddCargaText}>
           + Adicionar Equipamento à Lista
@@ -201,6 +200,7 @@ export default function FormPrevisaoCarga({ onSalvar }: Props) {
         </View>
       )}
 
+      {/* 💡 ESTE BOTÃO TAMBÉM */}
       <TouchableOpacity style={styles.btnSalvar} onPress={handleSalvar}>
         <Text style={styles.btnSalvarText}>Salvar Tipologia</Text>
       </TouchableOpacity>
@@ -242,6 +242,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   picker: { height: 55, color: "#1f2937", backgroundColor: "transparent" },
+
+  // 💡 ESTILOS DOS BOTÕES RESTAURADOS AQUI
   btnAddCarga: {
     backgroundColor: "#e0e7ff",
     padding: 12,
