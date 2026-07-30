@@ -192,6 +192,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     overflow: "hidden",
     marginBottom: 12,
+    justifyContent: "center",
   },
   pickerWrapper: {
     borderWidth: 1,
@@ -199,15 +200,9 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     backgroundColor: "#f9fafb",
     overflow: "hidden",
+    justifyContent: "center",
   },
-  picker: { height: 45, color: "#1f2937", backgroundColor: "transparent" },
-  pickerSmall: { height: 42, color: "#1f2937", backgroundColor: "transparent" },
-  btnSalvar: {
-    backgroundColor: "#4f46e5",
-    padding: 14,
-    borderRadius: 8,
-    alignItems: "center",
-    marginTop: 4,
-  },
+  picker: { height: 55, color: "#1f2937", backgroundColor: "transparent" },
+  pickerSmall: { height: 55, color: "#1f2937", backgroundColor: "transparent" },
   btnSalvarText: { color: "#fff", fontWeight: "bold", fontSize: 16 },
 });

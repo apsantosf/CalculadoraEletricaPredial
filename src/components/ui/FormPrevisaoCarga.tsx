@@ -239,8 +239,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     overflow: "hidden",
     marginBottom: 12,
+    justifyContent: "center",
   },
-  picker: { height: 45, color: "#1f2937", backgroundColor: "transparent" },
+  picker: { height: 55, color: "#1f2937", backgroundColor: "transparent" },
   btnAddCarga: {
     backgroundColor: "#e0e7ff",
     padding: 12,
