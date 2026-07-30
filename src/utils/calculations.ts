@@ -4,7 +4,6 @@ import { Prumada, Setor } from "./templates";
 const CV_PARA_W = 736;
 const HP_PARA_W = 746;
 
-// 💡 CÉREBRO ATUALIZADO: Converte todas as novas unidades para Watts
 export const converterParaWatts = (
   potencia: number,
   unidadeMedida: string,
@@ -19,7 +18,7 @@ export const converterParaWatts = (
   else if (unidadeMedida === "kVA" || unidadeMedida === "KVA") p *= 1000 * FP;
   else if (unidadeMedida === "BTU") p *= 0.1; // Regra prática de consumo elétrico
 
-  return p;
+  return p || 0; // Previne NaN caso a potência venha vazia
 };
 
 export const calcularPotenciaInstaladaTotal = (setores: Setor[]): number => {
@@ -27,11 +26,14 @@ export const calcularPotenciaInstaladaTotal = (setores: Setor[]): number => {
   setores.forEach((setor) => {
     let potenciaDoSetor = 0;
     setor.cargas.forEach((carga) => {
+      // 💡 BLINDAGEM: Se a quantidade não existir, assume 1
+      const qtdCarga = carga.quantidade || 1;
       potenciaDoSetor +=
-        converterParaWatts(carga.potencia, carga.unidadeMedida) *
-        carga.quantidade;
+        converterParaWatts(carga.potencia, carga.unidadeMedida) * qtdCarga;
     });
-    potenciaTotalWatts += potenciaDoSetor * setor.quantidade;
+    // 💡 BLINDAGEM: Se a quantidade do setor não existir, assume 1
+    const qtdSetor = setor.quantidade || 1;
+    potenciaTotalWatts += potenciaDoSetor * qtdSetor;
   });
   return potenciaTotalWatts;
 };
@@ -61,12 +63,15 @@ export const calcularDemandaPrumada = (
     if (setor && setor.tipoSetor === "Apartamento") {
       let potSetorW = 0;
       setor.cargas.forEach((carga) => {
+        // 💡 BLINDAGEM AQUI TAMBÉM
+        const qtdCarga = carga.quantidade || 1;
         potSetorW +=
-          converterParaWatts(carga.potencia, carga.unidadeMedida) *
-          carga.quantidade;
+          converterParaWatts(carga.potencia, carga.unidadeMedida) * qtdCarga;
       });
-      potenciaBrutaW += potSetorW * unidade.quantidade;
-      totalApartamentosNaPrumada += unidade.quantidade;
+
+      const qtdUnidade = unidade.quantidade || 1;
+      potenciaBrutaW += potSetorW * qtdUnidade;
+      totalApartamentosNaPrumada += qtdUnidade;
     }
   });
 
@@ -80,9 +85,11 @@ export const calcularDemandaAreasComuns = (setores: Setor[]): number => {
   let outrasCargasW = 0;
 
   areasComuns.forEach((area) => {
+    const qtdArea = area.quantidade || 1;
     area.cargas.forEach((carga) => {
       let p = converterParaWatts(carga.potencia, carga.unidadeMedida);
-      const qtdTotal = area.quantidade * carga.quantidade;
+      const qtdCarga = carga.quantidade || 1;
+      const qtdTotal = qtdArea * qtdCarga;
 
       if (
         carga.tipo === "Motor" ||
@@ -148,7 +155,7 @@ export const calcularDimensionamentoQGBT = (
   demandaGlobalW: number,
   tensaoStr: string,
 ) => {
-  if (!tensaoStr || demandaGlobalW === 0)
+  if (!tensaoStr || demandaGlobalW === 0 || isNaN(demandaGlobalW))
     return { corrente: "0.00", disjuntor: 0, cabo: "N/A" };
 
   const tensao = parseInt(tensaoStr);

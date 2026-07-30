@@ -27,6 +27,9 @@ export const gerarHTMLRelatorio = ({
   setores,
   dataAtual,
 }: GerarHtmlProps): string => {
+  // 💡 SEPARANDO OS APARTAMENTOS PARA A NOVA SEÇÃO DE DETALHAMENTO
+  const apartamentos = setores.filter((s) => s.tipoSetor === "Apartamento");
+
   return `
     <!DOCTYPE html>
     <html lang="pt-BR">
@@ -54,13 +57,22 @@ export const gerarHTMLRelatorio = ({
           .prot-col:last-child { border-right: none; }
           .prot-label { font-size: 11px; color: #3b82f6; text-transform: uppercase; font-weight: bold; margin-bottom: 5px; }
           .prot-value { font-size: 20px; font-weight: bold; color: #1e3a8a; }
-          h3.section-title { font-size: 16px; color: #1f2937; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; margin-bottom: 15px; text-transform: uppercase; }
+          h3.section-title { font-size: 16px; color: #1f2937; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; margin-bottom: 15px; text-transform: uppercase; page-break-after: avoid; }
           table { width: 100%; border-collapse: collapse; margin-bottom: 40px; font-size: 13px; }
           th, td { padding: 12px; border: 1px solid #e5e7eb; text-align: left; }
           th { background-color: #f3f4f6; color: #4b5563; font-weight: bold; text-transform: uppercase; font-size: 12px; }
           .td-right { text-align: right; font-weight: bold; }
           .text-purple { color: #8b5cf6; }
           .text-green { color: #10b981; }
+          
+          /* 💡 ESTILOS NOVOS PARA O RAIO-X DO PDF */
+          .details-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 40px; }
+          .details-box { background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 15px; box-sizing: border-box; width: 100%; margin-bottom: 15px; page-break-inside: avoid; }
+          .details-header { font-weight: bold; color: #1e40af; border-bottom: 1px solid #bfdbfe; padding-bottom: 6px; margin-bottom: 10px; font-size: 14px; }
+          .details-subtitle { font-size: 12px; font-weight: bold; color: #475569; margin-top: 10px; margin-bottom: 4px; }
+          .details-list { margin: 0; padding-left: 20px; font-size: 12px; color: #4b5563; }
+          .details-list li { margin-bottom: 3px; }
+          
           .signature-section { margin-top: 60px; page-break-inside: avoid; }
           .signature-box { width: 300px; margin: 0 auto; text-align: center; }
           .signature-line { border-top: 1px solid #374151; margin-bottom: 8px; }
@@ -160,18 +172,28 @@ export const gerarHTMLRelatorio = ({
                 ? areasComuns
                     .map((area) => {
                       let potW = 0;
+
+                      // 💡 GERA A SUB-LISTA DE EQUIPAMENTOS DA ÁREA COMUM
+                      let listaEquipamentosHTML = "";
                       area.cargas.forEach((c) => {
-                        // 💡 Conversor universal centralizado aplicado aqui também
                         let p = converterParaWatts(c.potencia, c.unidadeMedida);
                         potW += p * c.quantidade;
+                        listaEquipamentosHTML += `• ${c.nome} (${c.potencia} ${c.unidadeMedida})<br/>`;
                       });
+
                       const potKw = ((potW * area.quantidade) / 1000).toFixed(
                         2,
                       );
+
                       return `
                         <tr>
-                          <td><strong>${area.quantidade}x ${area.nome}</strong></td>
-                          <td class="td-right text-green">${potKw} kW</td>
+                          <td>
+                            <strong>${area.quantidade}x ${area.nome}</strong><br/>
+                            <span style="font-size: 11px; color: #6b7280; display: inline-block; margin-top: 4px;">
+                              ${listaEquipamentosHTML}
+                            </span>
+                          </td>
+                          <td class="td-right text-green" style="vertical-align: middle;">${potKw} kW</td>
                         </tr>
                       `;
                     })
@@ -180,6 +202,60 @@ export const gerarHTMLRelatorio = ({
             }
           </tbody>
         </table>
+
+        <!-- 💡 NOVA SEÇÃO: RAIO-X DAS TIPOLOGIAS -->
+        <h3 class="section-title" style="margin-top: 20px;">Detalhamento de Cargas por Tipologia (Raio-X)</h3>
+        <div>
+          ${
+            apartamentos.length > 0
+              ? apartamentos
+                  .map((setor) => {
+                    let conteudoInterno = "";
+
+                    if (setor.dadosPlanta) {
+                      // SE FOI FEITO POR PLANTA (NORMAS)
+                      const comodosStr = setor.dadosPlanta.comodos
+                        .map((c: any) => `<li>🏠 ${c.nome} (${c.area}m²)</li>`)
+                        .join("");
+                      const tuesStr = setor.dadosPlanta.tues
+                        .map(
+                          (t: any) =>
+                            `<li>⚡ ${t.nome} (${t.potenciaW} W)</li>`,
+                        )
+                        .join("");
+
+                      conteudoInterno = `
+                      <div class="details-subtitle">Ambientes Mapeados:</div>
+                      <ul class="details-list">${comodosStr || "<li>Nenhum ambiente detalhado</li>"}</ul>
+                      
+                      <div class="details-subtitle">Equipamentos Pesados (TUEs):</div>
+                      <ul class="details-list">${tuesStr || "<li>Nenhum TUE detalhado</li>"}</ul>
+                    `;
+                    } else {
+                      // SE FOI FEITO MANUAL (MEMORIAL)
+                      const cargasStr = setor.cargas
+                        .map(
+                          (c) =>
+                            `<li>⚡ ${c.nome} (${c.potencia} ${c.unidadeMedida})</li>`,
+                        )
+                        .join("");
+                      conteudoInterno = `
+                      <div class="details-subtitle">Composição do Apartamento (Manual):</div>
+                      <ul class="details-list">${cargasStr || "<li>Nenhuma carga descrita</li>"}</ul>
+                    `;
+                    }
+
+                    return `
+                    <div class="details-box">
+                      <div class="details-header">${setor.quantidade}x ${setor.nome}</div>
+                      ${conteudoInterno}
+                    </div>
+                  `;
+                  })
+                  .join("")
+              : `<p style="font-size: 13px; color: #6b7280; font-style: italic;">Nenhuma tipologia habitacional cadastrada.</p>`
+          }
+        </div>
 
         <div class="signature-section">
           <div class="signature-box">

@@ -3,6 +3,7 @@ import { FontAwesome5 } from "@expo/vector-icons";
 import * as Print from "expo-print";
 import { useRouter } from "expo-router";
 import * as Sharing from "expo-sharing";
+import { useState } from "react"; // 💡 IMPORTANTE: Adicionamos o estado para o Raio-X
 import {
   Platform,
   ScrollView,
@@ -20,13 +21,21 @@ import {
   calcularDemandaPrumada,
   calcularDimensionamentoQGBT,
   calcularPotenciaInstaladaTotal,
-  converterParaWatts, // 💡 Importado do motor central
+  converterParaWatts,
 } from "../../utils/calculations";
 import { gerarHTMLRelatorio } from "../../utils/pdfTemplate";
 
 export default function ScreenQuadro() {
   const { nomeProjeto, numeroAndares, tensao, setores, prumadas } = useData();
   const router = useRouter();
+
+  // 💡 ESTADO DO RAIO-X PARA AS PRUMADAS E ÁREAS COMUNS
+  const [cardsExpandidos, setCardsExpandidos] = useState<
+    Record<string, boolean>
+  >({});
+  const toggleExpandir = (id: string) => {
+    setCardsExpandidos((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
 
   const totalApartamentosCadastrados = setores
     .filter((s) => s.tipoSetor === "Apartamento")
@@ -189,11 +198,55 @@ export default function ScreenQuadro() {
               calcularDemandaPrumada(prumada, setores) / 1000
             ).toFixed(2);
             return (
-              <CardPrumada
-                key={prumada.id}
-                prumada={prumada}
-                demandaKw={demandaPrumadaKw}
-              />
+              <View key={prumada.id} style={{ marginBottom: 16 }}>
+                <CardPrumada prumada={prumada} demandaKw={demandaPrumadaKw} />
+
+                {/* 💡 BOTÃO DO RAIO-X NA PRUMADA */}
+                <TouchableOpacity
+                  onPress={() => toggleExpandir(prumada.id)}
+                  style={styles.btnExpandir}
+                >
+                  <FontAwesome5
+                    name={
+                      cardsExpandidos[prumada.id]
+                        ? "chevron-up"
+                        : "chevron-down"
+                    }
+                    size={12}
+                    color="#2563eb"
+                  />
+                  <Text style={styles.textoExpandir}>
+                    {cardsExpandidos[prumada.id]
+                      ? "Ocultar detalhamento da prumada"
+                      : "Ver cargas da prumada"}
+                  </Text>
+                </TouchableOpacity>
+
+                {/* 💡 ÁREA EXPANDIDA DA PRUMADA */}
+                {cardsExpandidos[prumada.id] && (
+                  <View style={styles.areaExpandida}>
+                    {prumada.unidades.map((u, index) => {
+                      const setor = setores.find((s) => s.id === u.setorId);
+                      if (!setor) return null;
+                      return (
+                        <View key={index} style={styles.grupoSetor}>
+                          <Text style={styles.tituloSetorPrumada}>
+                            {u.quantidade}x {setor.nome}
+                          </Text>
+                          {setor.cargas.map((c, i) => (
+                            <View key={i} style={styles.linhaCarga}>
+                              <Text style={styles.nomeCarga}>⚡ {c.nome}</Text>
+                              <Text style={styles.potenciaCarga}>
+                                {c.potencia} {c.unidadeMedida}
+                              </Text>
+                            </View>
+                          ))}
+                        </View>
+                      );
+                    })}
+                  </View>
+                )}
+              </View>
             );
           })
         )}
@@ -207,12 +260,51 @@ export default function ScreenQuadro() {
           areasComuns.map((area) => {
             let potW = 0;
             area.cargas.forEach((c) => {
-              // 💡 Substituído pelo conversor universal centralizado
               let p = converterParaWatts(c.potencia, c.unidadeMedida);
               potW += p * c.quantidade;
             });
             const potKw = ((potW * area.quantidade) / 1000).toFixed(2);
-            return <CardAreaComum key={area.id} area={area} potKw={potKw} />;
+            return (
+              <View key={area.id} style={{ marginBottom: 16 }}>
+                <CardAreaComum area={area} potKw={potKw} />
+
+                {/* 💡 BOTÃO DO RAIO-X NAS ÁREAS COMUNS */}
+                <TouchableOpacity
+                  onPress={() => toggleExpandir(area.id)}
+                  style={styles.btnExpandir}
+                >
+                  <FontAwesome5
+                    name={
+                      cardsExpandidos[area.id] ? "chevron-up" : "chevron-down"
+                    }
+                    size={12}
+                    color="#2563eb"
+                  />
+                  <Text style={styles.textoExpandir}>
+                    {cardsExpandidos[area.id]
+                      ? "Ocultar detalhamento de serviços"
+                      : "Ver cargas de serviços"}
+                  </Text>
+                </TouchableOpacity>
+
+                {/* 💡 ÁREA EXPANDIDA DAS ÁREAS COMUNS */}
+                {cardsExpandidos[area.id] && (
+                  <View style={styles.areaExpandida}>
+                    <Text style={styles.tituloSetorPrumada}>
+                      Itens na Área Comum:
+                    </Text>
+                    {area.cargas.map((c, i) => (
+                      <View key={i} style={styles.linhaCarga}>
+                        <Text style={styles.nomeCarga}>⚡ {c.nome}</Text>
+                        <Text style={styles.potenciaCarga}>
+                          {c.potencia} {c.unidadeMedida}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </View>
+            );
           })
         )}
 
@@ -392,4 +484,46 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     marginLeft: 10,
   },
+
+  // 💡 ESTILOS NOVOS DO RAIO-X
+  btnExpandir: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    alignSelf: "flex-start",
+    marginTop: 4,
+    backgroundColor: "#eff6ff",
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#bfdbfe",
+  },
+  textoExpandir: { fontSize: 12, color: "#2563eb", fontWeight: "600" },
+  areaExpandida: {
+    backgroundColor: "#ffffff",
+    padding: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    marginTop: 8,
+  },
+  grupoSetor: { marginBottom: 12 },
+  tituloSetorPrumada: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: "#374151",
+    marginBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e5e7eb",
+    paddingBottom: 4,
+  },
+  linhaCarga: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingVertical: 4,
+    paddingLeft: 8,
+  },
+  nomeCarga: { fontSize: 13, color: "#4b5563", flex: 1 },
+  potenciaCarga: { fontSize: 13, fontWeight: "bold", color: "#1f2937" },
 });

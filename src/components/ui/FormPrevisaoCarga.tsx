@@ -1,4 +1,6 @@
 // src/components/ui/FormPrevisaoCarga.tsx
+import { FontAwesome5 } from "@expo/vector-icons";
+import { Picker } from "@react-native-picker/picker";
 import { useState } from "react";
 import {
   Platform,
@@ -10,200 +12,274 @@ import {
 } from "react-native";
 import { Carga, Setor } from "../../utils/templates";
 
-interface FormPrevisaoCargaProps {
-  onSalvar: (setor: Setor) => void;
+interface Props {
+  onSalvar: (novoSetor: Setor) => void;
 }
 
-export default function FormPrevisaoCarga({
-  onSalvar,
-}: FormPrevisaoCargaProps) {
+const SUGESTOES_CARGAS = [
+  { label: "Selecione uma sugestão...", potencia: "" },
+  { label: "Iluminação e TUGs (Geral)", potencia: "1500" },
+  { label: "Ar-Condicionado 9.000 BTU", potencia: "820" },
+  { label: "Ar-Condicionado 12.000 BTU", potencia: "1100" },
+  { label: "Ar-Condicionado 18.000 BTU", potencia: "1700" },
+  { label: "Chuveiro Elétrico", potencia: "5500" },
+  { label: "Torneira Elétrica", potencia: "4400" },
+  { label: "Micro-ondas", potencia: "1500" },
+  { label: "Forno Elétrico", potencia: "2000" },
+];
+
+export default function FormPrevisaoCarga({ onSalvar }: Props) {
   const [nome, setNome] = useState("");
   const [quantidade, setQuantidade] = useState("1");
-  const [cargaTotal, setCargaTotal] = useState("");
-  const [unidadeMedida, setUnidadeMedida] = useState<"W" | "VA" | "kW">("W");
-  const [fases, setFases] = useState("2"); // Maioria dos aptos padrão são bifásicos (2) ou trifásicos (3)
+  const [fases, setFases] = useState("2");
 
-  const handleSalvar = () => {
-    if (!nome || !cargaTotal) {
-      const msg = "Preencha o nome do tipo de apartamento e a carga total.";
+  const [sugestaoSelecionada, setSugestaoSelecionada] = useState(
+    SUGESTOES_CARGAS[0].label,
+  );
+  const [nomeCarga, setNomeCarga] = useState("");
+  const [potenciaCarga, setPotenciaCarga] = useState("");
+  const [listaCargas, setListaCargas] = useState<Carga[]>([]);
+
+  const handleSelecaoSugestao = (val: string) => {
+    setSugestaoSelecionada(val);
+    const sel = SUGESTOES_CARGAS.find((c) => c.label === val);
+    if (sel && sel.potencia !== "") {
+      setNomeCarga(sel.label);
+      setPotenciaCarga(sel.potencia);
+    } else {
+      setNomeCarga("");
+      setPotenciaCarga("");
+    }
+  };
+
+  const handleAddCarga = () => {
+    const pot = parseFloat(potenciaCarga.replace(",", "."));
+    if (!nomeCarga.trim() || isNaN(pot)) {
+      const msg = "Preencha o nome e a potência do equipamento/circuito.";
       Platform.OS === "web" ? window.alert(msg) : alert(msg);
       return;
     }
 
-    const qtd = parseInt(quantidade) || 1;
-    let potenciaFinal = parseFloat(cargaTotal.replace(",", "."));
-
-    // Se o engenheiro digitar em kW, convertemos para W para manter o padrão no banco de dados
-    if (unidadeMedida === "kW") {
-      potenciaFinal = potenciaFinal * 1000;
-    }
-
-    // Criamos a Carga que representa o consumo total deste apartamento
-    const cargaDoApartamento: Carga = {
+    const novaCarga: Carga = {
       id: Math.random().toString(),
-      nome: `Carga Total - ${nome}`,
-      quantidade: 1, // É 1 por apartamento (a multiplicação total ocorre no Setor)
-      potencia: potenciaFinal,
-      unidadeMedida: unidadeMedida === "kW" ? "W" : unidadeMedida,
-      tipo: "TUG", // Generalizamos como TUG/TUE mista para o cálculo macro
-      fases: parseInt(fases) || 2,
-      fatorPotencia: 0.92, // Fator de potência médio padrão para residências
-      rendimento: 1,
+      nome: nomeCarga,
+      potencia: pot,
+      unidadeMedida: "W",
+      fatorPotencia: 0.95,
+      tipo: "Geral",
     };
 
-    // Criamos o Setor (que representa o grupo de apartamentos)
+    setListaCargas([...listaCargas, novaCarga]);
+    setNomeCarga("");
+    setPotenciaCarga("");
+    setSugestaoSelecionada(SUGESTOES_CARGAS[0].label);
+  };
+
+  const handleRemoverCarga = (id: string) => {
+    setListaCargas(listaCargas.filter((c) => c.id !== id));
+  };
+
+  const handleSalvar = () => {
+    if (!nome.trim() || listaCargas.length === 0) {
+      const msg =
+        "Dê um nome à tipologia e adicione pelo menos um equipamento na lista abaixo.";
+      Platform.OS === "web" ? window.alert(msg) : alert(msg);
+      return;
+    }
+
     const novoSetor: Setor = {
       id: Math.random().toString(),
       nome,
       tipoSetor: "Apartamento",
-      quantidade: qtd,
-      cargas: [cargaDoApartamento],
+      quantidade: parseInt(quantidade) || 1,
+      fases: parseInt(fases) || 2,
+      cargas: listaCargas,
     };
 
     onSalvar(novoSetor);
-
-    // Limpa o formulário
     setNome("");
     setQuantidade("1");
-    setCargaTotal("");
-    setFases("2");
+    setListaCargas([]);
   };
 
+  const totalW = listaCargas.reduce((acc, c) => acc + c.potencia, 0);
+
   return (
-    <View style={styles.card}>
-      <Text style={styles.title}>Cadastrar Unidade (Apartamentos)</Text>
-
-      <Text style={styles.label}>
-        Nome do Tipo (Ex: Apto Padrão, Cobertura)
-      </Text>
-      <TextInput
-        style={styles.input}
-        value={nome}
-        onChangeText={setNome}
-        placeholder="Ex: Apartamento Final 1 e 2"
-        placeholderTextColor="#9ca3af"
-      />
-
+    <View style={styles.container}>
+      <Text style={styles.subtitle}>1. Dados da Tipologia</Text>
       <View style={styles.row}>
-        <View style={styles.col}>
-          <Text style={styles.label}>Qtd. no Prédio</Text>
+        <View style={{ flex: 2, marginRight: 8 }}>
+          <Text style={styles.label}>Nome do Tipo (Ex: Apto Padrão)</Text>
+          <TextInput
+            style={styles.input}
+            value={nome}
+            onChangeText={setNome}
+            placeholder="Ex: Apto Padrão"
+          />
+        </View>
+        <View style={{ flex: 1, marginRight: 8 }}>
+          <Text style={styles.label}>Qtd. Prédio</Text>
           <TextInput
             style={styles.input}
             value={quantidade}
             onChangeText={setQuantidade}
             keyboardType="numeric"
-            placeholder="Ex: 36"
-            placeholderTextColor="#9ca3af"
           />
         </View>
-        <View style={styles.col}>
-          <Text style={styles.label}>Fases (Ramal)</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.label}>Fases</Text>
           <TextInput
             style={styles.input}
             value={fases}
             onChangeText={setFases}
             keyboardType="numeric"
-            placeholder="1, 2 ou 3"
-            placeholderTextColor="#9ca3af"
           />
         </View>
+      </View>
+
+      <Text style={styles.subtitle}>
+        2. Composição de Cargas (Adicione os Itens)
+      </Text>
+
+      {/* 💡 PICKER DE SUGESTÕES */}
+      <Text style={styles.label}>Sugestões Rápidas</Text>
+      <View style={styles.pickerContainer}>
+        <Picker
+          selectedValue={sugestaoSelecionada}
+          onValueChange={handleSelecaoSugestao}
+          style={styles.picker}
+        >
+          {SUGESTOES_CARGAS.map((c, i) => (
+            <Picker.Item key={i} label={c.label} value={c.label} />
+          ))}
+        </Picker>
       </View>
 
       <View style={styles.row}>
-        <View style={styles.col}>
-          <Text style={styles.label}>Carga Total p/ Unidade</Text>
+        <View style={{ flex: 2, marginRight: 8 }}>
+          <Text style={styles.label}>Equipamento/Circuito (Editável)</Text>
           <TextInput
             style={styles.input}
-            value={cargaTotal}
-            onChangeText={setCargaTotal}
-            keyboardType="numeric"
-            placeholder="Ex: 15000"
-            placeholderTextColor="#9ca3af"
+            value={nomeCarga}
+            onChangeText={setNomeCarga}
+            placeholder="Ex: Chuveiro Elétrico"
           />
         </View>
-        <View style={styles.col}>
-          <Text style={styles.label}>Unidade</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.label}>Potência (W)</Text>
           <TextInput
             style={styles.input}
-            value={unidadeMedida}
-            onChangeText={(t) => setUnidadeMedida(t as any)}
-            placeholder="W, VA ou kW"
-            placeholderTextColor="#9ca3af"
+            value={potenciaCarga}
+            onChangeText={setPotenciaCarga}
+            keyboardType="numeric"
+            placeholder="Ex: 5500"
           />
         </View>
       </View>
 
-      <TouchableOpacity
-        style={styles.botaoSalvar}
-        onPress={handleSalvar}
-        activeOpacity={0.8}
-      >
-        <Text style={styles.textoBotaoSalvar}>Adicionar Unidades</Text>
+      <TouchableOpacity style={styles.btnAddCarga} onPress={handleAddCarga}>
+        <Text style={styles.btnAddCargaText}>
+          + Adicionar Equipamento à Lista
+        </Text>
+      </TouchableOpacity>
+
+      {listaCargas.length > 0 && (
+        <View style={styles.listaContainer}>
+          {listaCargas.map((c) => (
+            <View key={c.id} style={styles.itemCarga}>
+              <Text style={styles.itemCargaText}>
+                ⚡ {c.nome} ({c.potencia} W)
+              </Text>
+              <TouchableOpacity onPress={() => handleRemoverCarga(c.id)}>
+                <FontAwesome5 name="trash" size={14} color="#ef4444" />
+              </TouchableOpacity>
+            </View>
+          ))}
+          <Text style={styles.totalText}>
+            Carga Total do Apartamento: {totalW} W
+          </Text>
+        </View>
+      )}
+
+      <TouchableOpacity style={styles.btnSalvar} onPress={handleSalvar}>
+        <Text style={styles.btnSalvarText}>Salvar Tipologia</Text>
       </TouchableOpacity>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    backgroundColor: "#ffffff",
-    padding: 20,
-    borderRadius: 12,
-    marginBottom: 20,
-    ...Platform.select({
-      web: {
-        boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
-      },
-      default: {
-        elevation: 3,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-      },
-    }),
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#1f2937",
-    marginBottom: 16,
-    textAlign: "center",
-  },
-  label: {
-    fontSize: 13,
+  container: { marginTop: 5 },
+  subtitle: {
+    fontSize: 14,
     fontWeight: "bold",
     color: "#374151",
-    marginBottom: 6,
+    marginBottom: 8,
+    marginTop: 12,
+  },
+  row: { flexDirection: "row", marginBottom: 12 },
+  label: {
+    fontSize: 12,
+    fontWeight: "bold",
+    color: "#6b7280",
+    marginBottom: 4,
   },
   input: {
-    backgroundColor: "#f9fafb",
     borderWidth: 1,
     borderColor: "#d1d5db",
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 16,
-    fontSize: 15,
-    color: "#1f2937",
+    borderRadius: 6,
+    padding: 10,
+    backgroundColor: "#f9fafb",
+    fontSize: 14,
   },
-  row: {
+  pickerContainer: {
+    backgroundColor: "#fefce8",
+    borderWidth: 1,
+    borderColor: "#fde047",
+    borderRadius: 8,
+    overflow: "hidden",
+    marginBottom: 12,
+  },
+  picker: { height: 45, color: "#1f2937", backgroundColor: "transparent" },
+  btnAddCarga: {
+    backgroundColor: "#e0e7ff",
+    padding: 12,
+    borderRadius: 6,
+    alignItems: "center",
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "#c7d2fe",
+  },
+  btnAddCargaText: { color: "#4f46e5", fontWeight: "bold" },
+  listaContainer: {
+    backgroundColor: "#f8fafc",
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+  },
+  itemCarga: {
     flexDirection: "row",
     justifyContent: "space-between",
-    gap: 12,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e2e8f0",
   },
-  col: {
-    flex: 1,
+  itemCargaText: { fontSize: 14, color: "#334155", fontWeight: "500" },
+  totalText: {
+    marginTop: 12,
+    fontWeight: "bold",
+    color: "#0f766e",
+    textAlign: "right",
+    fontSize: 15,
   },
-  botaoSalvar: {
-    backgroundColor: "#2563eb", // Azul para manter o padrão das unidades
+  btnSalvar: {
+    backgroundColor: "#2563eb",
     padding: 14,
     borderRadius: 8,
     alignItems: "center",
     marginTop: 10,
   },
-  textoBotaoSalvar: {
-    color: "#ffffff",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
+  btnSalvarText: { color: "#fff", fontWeight: "bold", fontSize: 16 },
 });
