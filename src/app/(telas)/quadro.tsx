@@ -1,9 +1,10 @@
 // src/app/(telas)/quadro.tsx
 import { FontAwesome5 } from "@expo/vector-icons";
+import * as FileSystem from "expo-file-system";
 import * as Print from "expo-print";
 import { useRouter } from "expo-router";
 import * as Sharing from "expo-sharing";
-import { useState } from "react"; // 💡 IMPORTANTE: Adicionamos o estado para o Raio-X
+import { useState } from "react";
 import {
   Platform,
   ScrollView,
@@ -29,7 +30,6 @@ export default function ScreenQuadro() {
   const { nomeProjeto, numeroAndares, tensao, setores, prumadas } = useData();
   const router = useRouter();
 
-  // 💡 ESTADO DO RAIO-X PARA AS PRUMADAS E ÁREAS COMUNS
   const [cardsExpandidos, setCardsExpandidos] = useState<
     Record<string, boolean>
   >({});
@@ -98,6 +98,92 @@ export default function ScreenQuadro() {
     } catch (error) {
       console.error("Erro ao gerar PDF:", error);
       alert("Não foi possível gerar o arquivo PDF.");
+    }
+  };
+
+  // 💡 NOVO MOTOR: Geração de Excel (CSV)
+  const gerarECompartilharExcel = async () => {
+    try {
+      // BOM para Excel reconhecer acentos em UTF-8
+      let csvString = "\uFEFF";
+
+      // Cabeçalho / Resumo
+      csvString += "RESUMO DO PROJETO\n";
+      csvString += `Projeto:;${nomeProjeto || "Sem Nome"}\n`;
+      csvString += `Andares:;${numeroAndares || "N/A"}\n`;
+      csvString += `Tensão (V):;${tensao || "N/A"}\n`;
+      csvString += `Potência Instalada Bruta (kW):;${potenciaTotalKw}\n`;
+      csvString += `Demanda Total QGBT (kW):;${demandaGlobalKw}\n`;
+      csvString += `Disjuntor Geral Calculado (A):;${dimensionamento.disjuntor}\n`;
+      csvString += `Cabo Alimentador Recomendado:;${dimensionamento.cabo}\n\n`;
+
+      // Prumadas
+      csvString += "DISTRIBUIÇÃO DE CARGAS (PRUMADAS)\n";
+      csvString += "Nome da Prumada;Unidades Conectadas;Demanda Real (kW)\n";
+      if (prumadas.length > 0) {
+        prumadas.forEach((p) => {
+          const dKw = (calcularDemandaPrumada(p, setores) / 1000).toFixed(2);
+          const unidadesStr = p.unidades
+            .map((u) => `${u.quantidade}x ${u.nomeSetor}`)
+            .join(" | ");
+          csvString += `${p.nome};${unidadesStr};${dKw}\n`;
+        });
+      } else {
+        csvString += "Nenhuma prumada configurada;;0\n";
+      }
+      csvString += "\n";
+
+      // Áreas Comuns
+      csvString += "SERVIÇOS GERAIS E ÁREAS COMUNS\n";
+      csvString +=
+        "Área/Setor;Equipamento;Quantidade;Potência (W);Potência Total do Item (W)\n";
+      if (areasComuns.length > 0) {
+        areasComuns.forEach((area) => {
+          area.cargas.forEach((c) => {
+            let potW = converterParaWatts(c.potencia, c.unidadeMedida);
+            let qtdCarga = c.quantidade || 1;
+            let potTotalCarga = potW * qtdCarga;
+            // Multiplica pela quantidade do setor/área se houver (ex: 2x Elevadores)
+            let qtdArea = area.quantidade || 1;
+
+            csvString += `${qtdArea}x ${area.nome};${c.nome};${qtdCarga};${potW};${potTotalCarga * qtdArea}\n`;
+          });
+        });
+      } else {
+        csvString += "Nenhum equipamento comum cadastrado;;;;\n";
+      }
+
+      if (Platform.OS === "web") {
+        // Exportação Web
+        const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        link.setAttribute(
+          "download",
+          `Planilha_Eletrica_${nomeProjeto || "Projeto"}.csv`,
+        );
+        link.style.visibility = "hidden";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } else {
+        // Exportação Mobile Nativa
+        const fileUri =
+          FileSystem.documentDirectory + `Planilha_${Date.now()}.csv`;
+        await FileSystem.writeAsStringAsync(fileUri, csvString, {
+          encoding: FileSystem.EncodingType.UTF8,
+        });
+
+        await Sharing.shareAsync(fileUri, {
+          mimeType: "text/csv",
+          dialogTitle: "Exportar Planilha Excel",
+          UTI: "public.comma-separated-values-text", // Para iOS entender que é um CSV
+        });
+      }
+    } catch (error) {
+      console.error("Erro ao gerar Excel:", error);
+      alert("Não foi possível gerar a planilha.");
     }
   };
 
@@ -200,8 +286,6 @@ export default function ScreenQuadro() {
             return (
               <View key={prumada.id} style={{ marginBottom: 16 }}>
                 <CardPrumada prumada={prumada} demandaKw={demandaPrumadaKw} />
-
-                {/* 💡 BOTÃO DO RAIO-X NA PRUMADA */}
                 <TouchableOpacity
                   onPress={() => toggleExpandir(prumada.id)}
                   style={styles.btnExpandir}
@@ -222,7 +306,6 @@ export default function ScreenQuadro() {
                   </Text>
                 </TouchableOpacity>
 
-                {/* 💡 ÁREA EXPANDIDA DA PRUMADA */}
                 {cardsExpandidos[prumada.id] && (
                   <View style={styles.areaExpandida}>
                     {prumada.unidades.map((u, index) => {
@@ -261,14 +344,12 @@ export default function ScreenQuadro() {
             let potW = 0;
             area.cargas.forEach((c) => {
               let p = converterParaWatts(c.potencia, c.unidadeMedida);
-              potW += p * c.quantidade;
+              potW += p * (c.quantidade || 1);
             });
-            const potKw = ((potW * area.quantidade) / 1000).toFixed(2);
+            const potKw = ((potW * (area.quantidade || 1)) / 1000).toFixed(2);
             return (
               <View key={area.id} style={{ marginBottom: 16 }}>
                 <CardAreaComum area={area} potKw={potKw} />
-
-                {/* 💡 BOTÃO DO RAIO-X NAS ÁREAS COMUNS */}
                 <TouchableOpacity
                   onPress={() => toggleExpandir(area.id)}
                   style={styles.btnExpandir}
@@ -287,7 +368,6 @@ export default function ScreenQuadro() {
                   </Text>
                 </TouchableOpacity>
 
-                {/* 💡 ÁREA EXPANDIDA DAS ÁREAS COMUNS */}
                 {cardsExpandidos[area.id] && (
                   <View style={styles.areaExpandida}>
                     <Text style={styles.tituloSetorPrumada}>
@@ -309,14 +389,27 @@ export default function ScreenQuadro() {
         )}
 
         {!bloqueioAtivo ? (
-          <TouchableOpacity
-            style={styles.botaoPdf}
-            onPress={gerarECompartilharPDF}
-            activeOpacity={0.8}
-          >
-            <FontAwesome5 name="file-pdf" size={20} color="#ffffff" />
-            <Text style={styles.textoBotaoPdf}>Gerar Relatório em PDF</Text>
-          </TouchableOpacity>
+          <View style={styles.boxBotoesExportacao}>
+            {/* Botão PDF Original */}
+            <TouchableOpacity
+              style={styles.botaoPdf}
+              onPress={gerarECompartilharPDF}
+              activeOpacity={0.8}
+            >
+              <FontAwesome5 name="file-pdf" size={18} color="#ffffff" />
+              <Text style={styles.textoBotaoPdf}>Gerar PDF</Text>
+            </TouchableOpacity>
+
+            {/* 💡 NOVO: Botão Excel */}
+            <TouchableOpacity
+              style={styles.botaoExcel}
+              onPress={gerarECompartilharExcel}
+              activeOpacity={0.8}
+            >
+              <FontAwesome5 name="file-excel" size={18} color="#ffffff" />
+              <Text style={styles.textoBotaoExcel}>Exportar Excel</Text>
+            </TouchableOpacity>
+          </View>
         ) : (
           <View style={{ height: 40 }} />
         )}
@@ -468,24 +561,45 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   textoVazio: { color: "#6b7280", fontStyle: "italic", marginBottom: 20 },
+
+  // 💡 CAIXA E BOTÕES DE EXPORTAÇÃO
+  boxBotoesExportacao: {
+    flexDirection: "row",
+    gap: 12,
+    marginTop: 20,
+    marginBottom: 40,
+  },
   botaoPdf: {
+    flex: 1,
     backgroundColor: "#2563eb",
-    padding: 16,
+    padding: 14,
     borderRadius: 8,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 20,
-    marginBottom: 40,
   },
   textoBotaoPdf: {
     color: "#ffffff",
-    fontSize: 16,
+    fontSize: 15,
+    fontWeight: "bold",
+    marginLeft: 10,
+  },
+  botaoExcel: {
+    flex: 1,
+    backgroundColor: "#10b981",
+    padding: 14,
+    borderRadius: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  textoBotaoExcel: {
+    color: "#ffffff",
+    fontSize: 15,
     fontWeight: "bold",
     marginLeft: 10,
   },
 
-  // 💡 ESTILOS NOVOS DO RAIO-X
   btnExpandir: {
     flexDirection: "row",
     alignItems: "center",

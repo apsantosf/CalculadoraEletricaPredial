@@ -27,7 +27,6 @@ export const gerarHTMLRelatorio = ({
   setores,
   dataAtual,
 }: GerarHtmlProps): string => {
-  // 💡 SEPARANDO OS APARTAMENTOS PARA A NOVA SEÇÃO DE DETALHAMENTO
   const apartamentos = setores.filter((s) => s.tipoSetor === "Apartamento");
 
   return `
@@ -173,22 +172,24 @@ export const gerarHTMLRelatorio = ({
                     .map((area) => {
                       let potW = 0;
 
-                      // 💡 GERA A SUB-LISTA DE EQUIPAMENTOS DA ÁREA COMUM
                       let listaEquipamentosHTML = "";
                       area.cargas.forEach((c) => {
                         let p = converterParaWatts(c.potencia, c.unidadeMedida);
-                        potW += p * c.quantidade;
+                        // 💡 CORREÇÃO: Fallback de segurança para 1 caso venha undefined
+                        potW += p * (c.quantidade || 1);
                         listaEquipamentosHTML += `• ${c.nome} (${c.potencia} ${c.unidadeMedida})<br/>`;
                       });
 
-                      const potKw = ((potW * area.quantidade) / 1000).toFixed(
-                        2,
-                      );
+                      // 💡 CORREÇÃO: Fallback também para a quantidade global da área
+                      const potKw = (
+                        (potW * (area.quantidade || 1)) /
+                        1000
+                      ).toFixed(2);
 
                       return `
                         <tr>
                           <td>
-                            <strong>${area.quantidade}x ${area.nome}</strong><br/>
+                            <strong>${area.quantidade || 1}x ${area.nome}</strong><br/>
                             <span style="font-size: 11px; color: #6b7280; display: inline-block; margin-top: 4px;">
                               ${listaEquipamentosHTML}
                             </span>
@@ -203,7 +204,6 @@ export const gerarHTMLRelatorio = ({
           </tbody>
         </table>
 
-        <!-- 💡 NOVA SEÇÃO: RAIO-X DAS TIPOLOGIAS -->
         <h3 class="section-title" style="margin-top: 20px;">Detalhamento de Cargas por Tipologia (Raio-X)</h3>
         <div>
           ${
@@ -213,7 +213,6 @@ export const gerarHTMLRelatorio = ({
                     let conteudoInterno = "";
 
                     if (setor.dadosPlanta) {
-                      // SE FOI FEITO POR PLANTA (NORMAS)
                       const comodosStr = setor.dadosPlanta.comodos
                         .map((c: any) => `<li>🏠 ${c.nome} (${c.area}m²)</li>`)
                         .join("");
@@ -232,7 +231,6 @@ export const gerarHTMLRelatorio = ({
                       <ul class="details-list">${tuesStr || "<li>Nenhum TUE detalhado</li>"}</ul>
                     `;
                     } else {
-                      // SE FOI FEITO MANUAL (MEMORIAL)
                       const cargasStr = setor.cargas
                         .map(
                           (c) =>
