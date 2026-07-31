@@ -11,22 +11,21 @@ import {
   View,
 } from "react-native";
 import CustomHeader from "../../components/ui/CustomHeader";
-import FormMotores from "../../components/ui/FormMotores";
-import FormPrevisaoCarga from "../../components/ui/FormPrevisaoCarga";
 import ModalDimensionamentoApto from "../../components/ui/ModalDimensionamentoApto";
+// 💡 NOVO: Importando o nosso modal expresso!
+import ModalCadastroExpresso from "../../components/ui/ModalCadastroExpresso";
 import { useData } from "../../context/DataContext";
-import { Carga, Setor } from "../../utils/templates";
 
 export default function ScreenCargas() {
-  const { setores, setoresDispatch, prumadas } = useData();
+  const { setores, setoresDispatch, prumadas, adicionarSetor } = useData();
 
+  // Estados dos Modais
   const [modalPlantaVisivel, setModalPlantaVisivel] = useState(false);
-  const [mostrarFormManual, setMostrarFormManual] = useState(false);
-  const [abaManual, setAbaManual] = useState<"unidades" | "comum">("unidades");
+  const [modalExpressoVisivel, setModalExpressoVisivel] = useState(false); // 💡 Modal Rápido
+
   const [cardsExpandidos, setCardsExpandidos] = useState<
     Record<string, boolean>
   >({});
-
   const [setorEmEdicao, setSetorEmEdicao] = useState<string | null>(null);
   const [dadosParaEdicao, setDadosParaEdicao] = useState<any>(null);
 
@@ -69,44 +68,6 @@ export default function ScreenCargas() {
     setDadosParaEdicao(null);
   };
 
-  const handleSalvarUnidade = (novoSetor: Setor) => {
-    setoresDispatch([...setores, novoSetor]);
-    const msg = `${novoSetor.quantidade}x ${novoSetor.nome} adicionado(s) com sucesso!`;
-    Platform.OS === "web" ? window.alert(msg) : alert(msg);
-  };
-
-  // 💡 NOVA LÓGICA: Joga todos os motores para um ÚNICO card de Áreas Comuns
-  const handleSalvarMotor = (carga: Omit<Carga, "id" | "tipo">) => {
-    const novaCarga: Carga = {
-      ...carga,
-      id: Math.random().toString(),
-      tipo: "Motor",
-    };
-
-    const setorComum = setores.find((s) => s.tipoSetor === "AreaComum");
-
-    if (setorComum) {
-      // Já existe a caixinha de áreas comuns, bota o motor novo lá dentro
-      const setoresAtualizados = setores.map((s) =>
-        s.id === setorComum.id ? { ...s, cargas: [...s.cargas, novaCarga] } : s,
-      );
-      setoresDispatch(setoresAtualizados);
-    } else {
-      // Cria a caixinha de áreas comuns pela primeira vez
-      const novoSetorAreaComum: Setor = {
-        id: "setor-areas-comuns",
-        nome: "Serviços Gerais (Áreas Comuns)",
-        tipoSetor: "AreaComum",
-        quantidade: 1,
-        cargas: [novaCarga],
-      };
-      setoresDispatch([...setores, novoSetorAreaComum]);
-    }
-
-    const msg = `${carga.nome} adicionado às Áreas Comuns!`;
-    Platform.OS === "web" ? window.alert(msg) : alert(msg);
-  };
-
   const removerItem = (id: string) => {
     setoresDispatch(setores.filter((s) => s.id !== id));
   };
@@ -137,7 +98,6 @@ export default function ScreenCargas() {
     }
   };
 
-  // 💡 NOVA LÓGICA: Apagar apenas um motorzinho ou TUE que está dentro do Raio-X
   const handleRemoverCargaInterna = (idSetor: string, idCarga: string) => {
     const msg = "Deseja remover este equipamento específico?";
     const acao = () => {
@@ -149,7 +109,7 @@ export default function ScreenCargas() {
           }
           return s;
         })
-        .filter((s) => s.cargas.length > 0); // Se esvaziar o grupo, apaga ele
+        .filter((s) => s.cargas.length > 0);
       setoresDispatch(setoresAtualizados);
     };
 
@@ -175,138 +135,56 @@ export default function ScreenCargas() {
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
       >
-        {!mostrarFormManual && (
-          <View style={styles.botoesAcaoContainer}>
-            {(metodologiaAtual === "nenhuma" || isPlanta) && (
-              <TouchableOpacity
-                style={[styles.botaoAcao, styles.botaoPlanta]}
-                onPress={() => setModalPlantaVisivel(true)}
-                activeOpacity={0.8}
-              >
-                <FontAwesome5
-                  name="ruler-combined"
-                  size={20}
-                  color="#ffffff"
-                  style={{ marginBottom: 8 }}
-                />
-                <Text style={styles.textoBotaoAcao}>Dimensionar</Text>
-                <Text style={styles.subtextoBotaoAcao}>
-                  Por Planta (NBR 5410)
-                </Text>
-              </TouchableOpacity>
-            )}
-
+        <View style={styles.botoesAcaoContainer}>
+          {(metodologiaAtual === "nenhuma" || isPlanta) && (
             <TouchableOpacity
-              style={[
-                styles.botaoAcao,
-                isPlanta ? styles.botaoComum : styles.botaoManual,
-              ]}
-              onPress={() => {
-                if (isPlanta) setAbaManual("comum");
-                setMostrarFormManual(true);
-              }}
+              style={[styles.botaoAcao, styles.botaoPlanta]}
+              onPress={() => setModalPlantaVisivel(true)}
               activeOpacity={0.8}
             >
               <FontAwesome5
-                name={isPlanta ? "cogs" : "bolt"}
+                name="ruler-combined"
                 size={20}
                 color="#ffffff"
                 style={{ marginBottom: 8 }}
               />
-              <Text style={styles.textoBotaoAcao}>
-                {isPlanta ? "Áreas Comuns" : "Cadastrar"}
-              </Text>
+              <Text style={styles.textoBotaoAcao}>Dimensionar</Text>
               <Text style={styles.subtextoBotaoAcao}>
-                {isPlanta
-                  ? "Elevadores, Bombas, etc."
-                  : "Manualmente (Memorial)"}
+                Por Planta (NBR 5410)
               </Text>
             </TouchableOpacity>
-          </View>
-        )}
+          )}
 
-        {!mostrarFormManual && metodologiaAtual !== "nenhuma" && (
+          {/* 💡 BOTÃO AZUL AGORA CHAMA O MODAL EXPRESSO */}
+          <TouchableOpacity
+            style={[
+              styles.botaoAcao,
+              isPlanta ? styles.botaoComum : styles.botaoManual,
+            ]}
+            onPress={() => setModalExpressoVisivel(true)}
+            activeOpacity={0.8}
+          >
+            <FontAwesome5
+              name={isPlanta ? "cogs" : "bolt"}
+              size={20}
+              color="#ffffff"
+              style={{ marginBottom: 8 }}
+            />
+            <Text style={styles.textoBotaoAcao}>
+              {isPlanta ? "Áreas Comuns" : "Cadastrar"}
+            </Text>
+            <Text style={styles.subtextoBotaoAcao}>
+              {isPlanta ? "Elevadores, Bombas, etc." : "Manualmente (Expresso)"}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {metodologiaAtual !== "nenhuma" && (
           <Text style={styles.textoTrava}>
             {isPlanta
               ? "⚠️ Modo Normativo (Planta) ativo para as Unidades. O cadastro manual de apartamentos foi desativado."
               : "⚠️ Modo Manual ativo para as Unidades. A aba de Planta foi ocultada para evitar conflitos."}
           </Text>
-        )}
-
-        {mostrarFormManual && (
-          <View style={styles.boxFormManual}>
-            <View style={styles.headerFormManual}>
-              <Text style={styles.tituloFormManual}>
-                {isPlanta ? "Cadastro de Áreas Comuns" : "Cadastro Rápido"}
-              </Text>
-              <TouchableOpacity
-                onPress={() => setMostrarFormManual(false)}
-                style={{ padding: 4 }}
-              >
-                <FontAwesome5 name="times" size={20} color="#6b7280" />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.tabsContainer}>
-              {!isPlanta && (
-                <TouchableOpacity
-                  style={[
-                    styles.tabButton,
-                    abaManual === "unidades" && styles.tabActive,
-                  ]}
-                  onPress={() => setAbaManual("unidades")}
-                  activeOpacity={0.8}
-                >
-                  <FontAwesome5
-                    name="building"
-                    size={14}
-                    color={abaManual === "unidades" ? "#ffffff" : "#6b7280"}
-                  />
-                  <Text
-                    style={[
-                      styles.tabText,
-                      abaManual === "unidades" && styles.tabTextActive,
-                    ]}
-                  >
-                    Tipologia (Apto)
-                  </Text>
-                </TouchableOpacity>
-              )}
-
-              <TouchableOpacity
-                style={[
-                  styles.tabButton,
-                  abaManual === "comum" && (styles.tabActive || isPlanta),
-                ]}
-                onPress={() => setAbaManual("comum")}
-                activeOpacity={0.8}
-              >
-                <FontAwesome5
-                  name="cogs"
-                  size={14}
-                  color={
-                    abaManual === "comum" || isPlanta ? "#ffffff" : "#6b7280"
-                  }
-                />
-                <Text
-                  style={[
-                    styles.tabText,
-                    (abaManual === "comum" || isPlanta) && styles.tabTextActive,
-                  ]}
-                >
-                  Áreas Comuns
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.areaFormulario}>
-              {abaManual === "unidades" && !isPlanta ? (
-                <FormPrevisaoCarga onSalvar={handleSalvarUnidade} />
-              ) : (
-                <FormMotores onSalvar={handleSalvarMotor} />
-              )}
-            </View>
-          </View>
         )}
 
         <View style={styles.listaContainer}>
@@ -391,7 +269,6 @@ export default function ScreenCargas() {
                     </View>
                   </View>
 
-                  {/* 💡 RAIO-X PARA TODOS: Planta, Manual e Áreas Comuns! */}
                   {cardsExpandidos[setor.id] && (
                     <View style={styles.areaExpandida}>
                       {cargasOrdenadas.map((carga: any, index: number) => (
@@ -413,7 +290,6 @@ export default function ScreenCargas() {
                               {carga.potencia} {carga.unidadeMedida}
                             </Text>
 
-                            {/* 💡 LIXEIRINHA PARA DELETAR ITEM ESPECÍFICO (Só não aparece se for pacote da NBR 5410, pois lá usa o Lápis de edição) */}
                             {!setor.dadosPlanta && (
                               <TouchableOpacity
                                 onPress={() =>
@@ -440,6 +316,7 @@ export default function ScreenCargas() {
         </View>
       </ScrollView>
 
+      {/* MODAL PLANTA ORIGINAL */}
       <ModalDimensionamentoApto
         visivel={modalPlantaVisivel}
         dadosIniciais={dadosParaEdicao}
@@ -493,6 +370,20 @@ export default function ScreenCargas() {
               : alert("Tipologia salva!");
           }
           fecharModalPlanta();
+        }}
+      />
+
+      {/* 💡 NOVO MODAL EXPRESSO */}
+      <ModalCadastroExpresso
+        visivel={modalExpressoVisivel}
+        isPlanta={isPlanta}
+        onClose={() => setModalExpressoVisivel(false)}
+        onSalvar={(novoSetor) => {
+          adicionarSetor(novoSetor);
+          setModalExpressoVisivel(false);
+          Platform.OS === "web"
+            ? window.alert("Salvo com sucesso!")
+            : alert("Salvo com sucesso!");
         }}
       />
     </View>
@@ -549,48 +440,6 @@ const styles = StyleSheet.create({
     fontStyle: "italic",
     paddingHorizontal: 10,
   },
-  boxFormManual: {
-    backgroundColor: "#ffffff",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 24,
-    borderWidth: 1,
-    borderColor: "#e5e7eb",
-    ...Platform.select({
-      web: { boxShadow: "0px 4px 10px rgba(0,0,0,0.08)" },
-      default: { elevation: 3 },
-    }),
-  },
-  headerFormManual: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 16,
-    borderBottomWidth: 1,
-    borderColor: "#f3f4f6",
-    paddingBottom: 12,
-  },
-  tituloFormManual: { fontSize: 16, fontWeight: "bold", color: "#1f2937" },
-  tabsContainer: {
-    flexDirection: "row",
-    backgroundColor: "#f3f4f6",
-    borderRadius: 8,
-    padding: 4,
-    marginBottom: 16,
-  },
-  tabButton: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 10,
-    borderRadius: 6,
-    gap: 8,
-  },
-  tabActive: { backgroundColor: "#2563eb" },
-  tabText: { color: "#6b7280", fontWeight: "bold", fontSize: 13 },
-  tabTextActive: { color: "#ffffff" },
-  areaFormulario: { paddingHorizontal: 4 },
   listaContainer: { marginTop: 10 },
   tituloLista: {
     fontSize: 18,

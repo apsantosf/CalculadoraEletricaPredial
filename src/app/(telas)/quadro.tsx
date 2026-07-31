@@ -153,6 +153,12 @@ export default function ScreenQuadro() {
         csvString += "Nenhum equipamento comum cadastrado;;;;\n";
       }
 
+      // 💡 NOVO: Adicionando o Disclaimer no final do Excel
+      csvString += "\n";
+      csvString += "AVISO DE RESPONSABILIDADE TECNICA\n";
+      csvString +=
+        "Os calculos e dimensionamentos fornecidos por este aplicativo sao baseados nos criterios gerais da NBR 5410 para instalacoes internas de Baixa Tensao. O dimensionamento final do Padrao de Entrada (ramal de ligacao, poste e caixas de medicao) esta sujeito a aprovacao e as tabelas de demanda especificas da concessionaria de energia da sua regiao. Sempre consulte a norma local antes da execucao.\n";
+
       if (Platform.OS === "web") {
         // Exportação Web
         const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });

@@ -264,6 +264,14 @@ export const gerarHTMLRelatorio = ({
           </div>
         </div>
 
+        <!-- 💡 NOVO: Caixa de Aviso de Responsabilidade Técnica -->
+        <div style="margin-top: 40px; padding: 15px; background-color: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; page-break-inside: avoid;">
+          <h4 style="margin: 0 0 8px 0; color: #991b1b; font-size: 12px; text-transform: uppercase;">Aviso de Responsabilidade Técnica</h4>
+          <p style="margin: 0; color: #7f1d1d; font-size: 10px; line-height: 1.4; text-align: justify;">
+            Os cálculos e dimensionamentos fornecidos por este aplicativo são baseados nos critérios gerais da <strong>NBR 5410</strong> para instalações internas de Baixa Tensão. O dimensionamento final do <strong>Padrão de Entrada</strong> (ramal de ligação, poste e caixas de medição) está sujeito à aprovação e às tabelas de demanda específicas da concessionária de energia da sua região. Sempre consulte a norma local antes da execução.
+          </p>
+        </div>
+
         <div class="footer">
           Relatório gerado automaticamente através do sistema. Os cálculos de demanda baseiam-se nos fatores de agrupamento estabelecidos pelas normativas vigentes (NBR 5410). O dimensionamento de cabos considera isolação 90°C.
         </div>
