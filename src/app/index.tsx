@@ -5,6 +5,7 @@ import { useState } from "react";
 import {
   Alert,
   FlatList,
+  Linking, // 💡 NOVO: Importamos o Linking para abrir a URL
   Modal,
   Platform,
   ScrollView,
@@ -33,12 +34,10 @@ export default function ScreenInicio() {
   } = useData();
 
   const [modalProjetosVisivel, setModalProjetosVisivel] = useState(false);
-
-  // 💡 Novo estado para controlar o que o usuário digita na busca
   const [busca, setBusca] = useState("");
 
   const abrirModalProjetos = () => {
-    setBusca(""); // Limpa a busca toda vez que abre o modal
+    setBusca("");
     setModalProjetosVisivel(true);
   };
 
@@ -65,7 +64,15 @@ export default function ScreenInicio() {
     }
   };
 
-  // 💡 Lógica de Filtro e Ordenação Alfabética em Tempo Real
+  // 💡 Função para abrir o Manual no Google Drive
+  const abrirManual = () => {
+    const urlManual =
+      "https://drive.google.com/file/d/1rX-ms619ps_w6UCj7Y5BydqcMz3cclwm/view?usp=sharing";
+    Linking.openURL(urlManual).catch(() => {
+      Alert.alert("Erro", "Não foi possível abrir o link do manual.");
+    });
+  };
+
   const projetosFiltrados = [...projetosSalvos]
     .filter((p) => {
       const nome = p.nomeProjeto || "Projeto Sem Nome";
@@ -173,9 +180,30 @@ export default function ScreenInicio() {
           </View>
           <FontAwesome5 name="chevron-down" size={14} color="#6b7280" />
         </TouchableOpacity>
+
+        {/* 💡 NOVA SEÇÃO: AJUDA E DOCUMENTAÇÃO */}
+        <View style={styles.secaoAjuda}>
+          <Text style={styles.sectionTitle}>Ajuda e Suporte</Text>
+          <Text style={styles.labelSecundario}>
+            Acesse o guia passo a passo e o memorial de cálculos:
+          </Text>
+          <TouchableOpacity
+            style={styles.botaoManual}
+            onPress={abrirManual}
+            activeOpacity={0.8}
+          >
+            <FontAwesome5
+              name="book"
+              size={18}
+              color="#ffffff"
+              style={{ marginRight: 12 }}
+            />
+            <Text style={styles.textoBotaoManual}>Ler Manual do Usuário</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
 
-      {/* 💡 MODAL COM BUSCA E LISTA FORMATADA */}
+      {/* MODAL COM BUSCA E LISTA FORMATADA */}
       <Modal visible={modalProjetosVisivel} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
@@ -189,7 +217,7 @@ export default function ScreenInicio() {
               </TouchableOpacity>
             </View>
 
-            {/* 💡 BARRA DE PESQUISA */}
+            {/* BARRA DE PESQUISA */}
             <View style={styles.buscaContainer}>
               <FontAwesome5 name="search" size={14} color="#9ca3af" />
               <TextInput
@@ -198,7 +226,7 @@ export default function ScreenInicio() {
                 placeholderTextColor="#9ca3af"
                 value={busca}
                 onChangeText={setBusca}
-                autoFocus={Platform.OS === "web"} // Facilita digitar no PC
+                autoFocus={Platform.OS === "web"}
               />
               {busca.length > 0 && (
                 <TouchableOpacity
@@ -222,8 +250,6 @@ export default function ScreenInicio() {
               }
               renderItem={({ item }) => {
                 const isAtivo = item.id === idProjetoAtual;
-
-                // Formatação exata em uma linha: "Edifício Aurora 6 And. 380V"
                 const nomeDisplay = item.nomeProjeto || "Projeto Sem Nome";
                 const andaresDisplay = item.numeroAndares
                   ? `${item.numeroAndares} And.`
@@ -378,6 +404,32 @@ const styles = StyleSheet.create({
     boxShadow: "none",
   },
   pickerButtonText: { fontSize: 15, color: "#1f2937", fontWeight: "600" },
+
+  // 💡 ESTILOS DO NOVO BOTÃO DE MANUAL
+  secaoAjuda: {
+    marginTop: 35,
+    borderTopWidth: 1,
+    borderTopColor: "#e5e7eb",
+    paddingTop: 20,
+  },
+  botaoManual: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#475569", // Cinza chique/profissional
+    borderRadius: 8,
+    padding: 16,
+    marginTop: 8,
+    ...Platform.select({
+      web: { boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)" },
+      default: { elevation: 2 },
+    }),
+  },
+  textoBotaoManual: {
+    color: "#ffffff",
+    fontSize: 15,
+    fontWeight: "bold",
+  },
 
   // ESTILOS DO MODAL
   modalOverlay: {
