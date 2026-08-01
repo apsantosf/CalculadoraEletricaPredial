@@ -321,7 +321,7 @@ const styles = StyleSheet.create({
     maxWidth: 450,
     width: "100%",
     alignSelf: "center",
-    paddingBottom: 60,
+    paddingBottom: 140,
   },
 
   cardConfig: {
