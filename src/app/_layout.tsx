@@ -2,6 +2,7 @@
 import { FontAwesome5, MaterialCommunityIcons } from "@expo/vector-icons";
 import { Slot, usePathname, useRouter } from "expo-router";
 import {
+  Alert, // 💡 IMPORTADO O ALERT AQUI
   LogBox,
   Platform,
   StyleSheet,
@@ -13,7 +14,7 @@ import {
   SafeAreaProvider,
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
-import { DataProvider } from "../context/DataContext";
+import { DataProvider, useData } from "../context/DataContext"; // 💡 IMPORTAMOS O useData AQUI
 
 LogBox.ignoreLogs(["The Flipper native module is not available"]);
 
@@ -22,14 +23,25 @@ function BarraInferiorFixa() {
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
 
+  // 💡 TRAZEMOS AS VARIÁVEIS DO CONTEXTO
+  const { nomeProjeto, numeroAndares, tensao } = useData();
+
+  // 💡 LÓGICA DE BLOQUEIO: Retorna TRUE se faltar algum dado
+  const projetoIncompleto =
+    !nomeProjeto.trim() || !numeroAndares.trim() || !tensao;
+
   const bottomOffset =
     Platform.OS === "android" ? Math.max(insets.bottom + 16, 24) : 24;
 
-  // 💡 ORDEM DAS ABAS ATUALIZADA AQUI
   const tabs = [
     { key: "/", title: "Início", icon: "home", pack: "fontawesome" },
     { key: "/cargas", title: "Cargas", icon: "elevator", pack: "material" },
-    { key: "/prumadas", title: "Prumadas", icon: "building", pack: "fontawesome" },
+    {
+      key: "/prumadas",
+      title: "Prumadas",
+      icon: "building",
+      pack: "fontawesome",
+    },
     { key: "/quadro", title: "QGBT", icon: "bolt", pack: "fontawesome" },
   ];
 
@@ -38,15 +50,34 @@ function BarraInferiorFixa() {
       <View style={styles.tabBar}>
         {tabs.map((tab) => {
           const isActive = pathname === tab.key;
+          // 💡 SE ESTIVER INCOMPLETO E NÃO FOR A ABA INÍCIO, ESTÁ BLOQUEADO
+          const isDisabled = projetoIncompleto && tab.key !== "/";
+
           const activeColor = "#2563eb";
           const inactiveColor = "#6b7280";
-          const color = isActive ? activeColor : inactiveColor;
+          const disabledColor = "#d1d5db"; // Cinza bem claro para os bloqueados
+
+          const color = isActive
+            ? activeColor
+            : isDisabled
+              ? disabledColor
+              : inactiveColor;
 
           return (
             <TouchableOpacity
               key={tab.key}
-              style={styles.tabItem}
-              onPress={() => router.replace(tab.key as any)}
+              style={[styles.tabItem, isDisabled && { opacity: 0.5 }]}
+              onPress={() => {
+                if (isDisabled) {
+                  const msg =
+                    "Preencha o Nome, Andares e Tensão na aba Início antes de avançar.";
+                  Platform.OS === "web"
+                    ? window.alert(msg)
+                    : Alert.alert("Acesso Bloqueado", msg);
+                  return;
+                }
+                router.replace(tab.key as any);
+              }}
               activeOpacity={0.7}
             >
               {tab.pack === "fontawesome" ? (

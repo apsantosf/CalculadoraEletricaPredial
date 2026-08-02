@@ -11,17 +11,15 @@ import {
   View,
 } from "react-native";
 import CustomHeader from "../../components/ui/CustomHeader";
-import ModalDimensionamentoApto from "../../components/ui/ModalDimensionamentoApto";
-// 💡 NOVO: Importando o nosso modal expresso!
 import ModalCadastroExpresso from "../../components/ui/ModalCadastroExpresso";
+import ModalDimensionamentoApto from "../../components/ui/ModalDimensionamentoApto";
 import { useData } from "../../context/DataContext";
 
 export default function ScreenCargas() {
-  const { setores, setoresDispatch, prumadas, adicionarSetor } = useData();
+  const { setores, setoresDispatch, prumadas } = useData();
 
-  // Estados dos Modais
   const [modalPlantaVisivel, setModalPlantaVisivel] = useState(false);
-  const [modalExpressoVisivel, setModalExpressoVisivel] = useState(false); // 💡 Modal Rápido
+  const [modalExpressoVisivel, setModalExpressoVisivel] = useState(false);
 
   const [cardsExpandidos, setCardsExpandidos] = useState<
     Record<string, boolean>
@@ -48,6 +46,9 @@ export default function ScreenCargas() {
   }
 
   const isPlanta = metodologiaAtual === "planta";
+
+  // 💡 A NOSSA NOVA VARIÁVEL DE CONTROLE DE INTERFACE:
+  const temApartamentos = apartamentos.length > 0;
 
   const handleEditarPlanta = (setor: any) => {
     if (setor.dadosPlanta) {
@@ -155,7 +156,6 @@ export default function ScreenCargas() {
             </TouchableOpacity>
           )}
 
-          {/* 💡 BOTÃO AZUL AGORA CHAMA O MODAL EXPRESSO */}
           <TouchableOpacity
             style={[
               styles.botaoAcao,
@@ -170,11 +170,20 @@ export default function ScreenCargas() {
               color="#ffffff"
               style={{ marginBottom: 8 }}
             />
+            {/* 💡 AQUI O BOTÃO FICA INTELIGENTE CONFORME A QUANTIDADE DE APARTAMENTOS */}
             <Text style={styles.textoBotaoAcao}>
-              {isPlanta ? "Áreas Comuns" : "Cadastrar"}
+              {isPlanta
+                ? "Áreas Comuns"
+                : temApartamentos
+                  ? "Adicionar Mais"
+                  : "Cadastrar"}
             </Text>
             <Text style={styles.subtextoBotaoAcao}>
-              {isPlanta ? "Elevadores, Bombas, etc." : "Manualmente (Expresso)"}
+              {isPlanta
+                ? "Elevadores, Bombas, etc."
+                : temApartamentos
+                  ? "Aptos ou Áreas Comuns"
+                  : "Manualmente (Expresso)"}
             </Text>
           </TouchableOpacity>
         </View>
@@ -316,7 +325,6 @@ export default function ScreenCargas() {
         </View>
       </ScrollView>
 
-      {/* MODAL PLANTA ORIGINAL */}
       <ModalDimensionamentoApto
         visivel={modalPlantaVisivel}
         dadosIniciais={dadosParaEdicao}
@@ -353,7 +361,8 @@ export default function ScreenCargas() {
             setoresDispatch(setoresAtualizados);
             Platform.OS === "web"
               ? window.alert("Tipologia atualizada com sucesso!")
-              : alert("Tipologia atualizada!");
+              : Alert.alert("Sucesso", "Tipologia atualizada com sucesso!");
+            fecharModalPlanta();
           } else {
             const novoSetor: any = {
               id: Math.random().toString(),
@@ -365,25 +374,35 @@ export default function ScreenCargas() {
               dadosPlanta: { comodos: comodosCrus, tues: tuesCrus },
             };
             setoresDispatch([...setores, novoSetor]);
+
             Platform.OS === "web"
-              ? window.alert("Tipologia salva com sucesso!")
-              : alert("Tipologia salva!");
+              ? window.alert(
+                  "Tipologia salva! Altere o nome para adicionar a próxima ou feche no X.",
+                )
+              : Alert.alert(
+                  "Sucesso",
+                  "Tipologia salva! Altere os dados para adicionar a próxima ou feche no X.",
+                );
           }
-          fecharModalPlanta();
         }}
       />
 
-      {/* 💡 NOVO MODAL EXPRESSO */}
+      {/* 💡 PASSANDO A INFORMAÇÃO PARA O MODAL */}
       <ModalCadastroExpresso
         visivel={modalExpressoVisivel}
         isPlanta={isPlanta}
+        temApartamentos={temApartamentos}
         onClose={() => setModalExpressoVisivel(false)}
         onSalvar={(novoSetor) => {
-          adicionarSetor(novoSetor);
-          setModalExpressoVisivel(false);
+          setoresDispatch([...setores, novoSetor]);
           Platform.OS === "web"
-            ? window.alert("Salvo com sucesso!")
-            : alert("Salvo com sucesso!");
+            ? window.alert(
+                "Salvo com sucesso! Cadastre o próximo ou feche no X.",
+              )
+            : Alert.alert(
+                "Sucesso",
+                "Salvo com sucesso! Cadastre o próximo ou feche no X.",
+              );
         }}
       />
     </View>

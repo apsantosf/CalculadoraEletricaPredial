@@ -1,8 +1,10 @@
+// src/components/ui/ModalDimensionamentoApto.tsx
 import { FontAwesome5 } from "@expo/vector-icons";
 import { Picker } from "@react-native-picker/picker";
 import { useEffect, useState } from "react";
 import {
   Alert,
+  KeyboardAvoidingView,
   Modal,
   Platform,
   ScrollView,
@@ -58,7 +60,8 @@ export default function ModalDimensionamentoApto({
   const [abaAtiva, setAbaAtiva] = useState<"comodos" | "tues">("comodos");
   const [comodos, setComodos] = useState<ComodoPlanta[]>([]);
   const [tues, setTues] = useState<TuePlanta[]>([]);
-  const [nomeTipologia, setNomeTipologia] = useState("Apto Tipo 1");
+
+  const [nomeTipologia, setNomeTipologia] = useState("");
   const [quantidadeTipologia, setQuantidadeTipologia] = useState("1");
 
   const [nomeComodo, setNomeComodo] = useState(OPCOES_COMODOS[0].label);
@@ -79,7 +82,7 @@ export default function ModalDimensionamentoApto({
         setComodos(dadosIniciais.comodos);
         setTues(dadosIniciais.tues);
       } else {
-        setNomeTipologia("Apto Tipo 1");
+        setNomeTipologia("");
         setQuantidadeTipologia("1");
         setComodos([]);
         setTues([]);
@@ -180,11 +183,33 @@ export default function ModalDimensionamentoApto({
       Platform.OS === "web" ? window.alert(msg) : Alert.alert("Atenção", msg);
       return;
     }
+
+    if (!nomeTipologia.trim()) {
+      const msg =
+        "Por favor, digite o Nome da Tipologia (Ex: Cobertura, Apto Tipo 2) no rodapé da tela.";
+      Platform.OS === "web"
+        ? window.alert(msg)
+        : Alert.alert("Falta o Nome", msg);
+      return;
+    }
+
+    // 🛡️ BLINDAGEM EXTRA: Verifica se a função de salvar chegou corretamente da tela principal
+    if (typeof onSalvar !== "function") {
+      Alert.alert(
+        "Erro de Conexão",
+        "A tela não conseguiu se conectar com a função de salvar. Tente reiniciar o aplicativo.",
+      );
+      return;
+    }
+
     const qtd = parseInt(quantidadeTipologia) || 1;
-    const nome = nomeTipologia.trim() || "Apto Dimensionado";
+    const nome = nomeTipologia.trim();
     const cargasCalculadas = calcularDemandaApartamento(comodos, tues);
     onSalvar(cargasCalculadas, nome, qtd, comodos, tues);
-    onClose();
+
+    if (!dadosIniciais) {
+      setNomeTipologia("");
+    }
   };
 
   const isDesativado = comodos.length === 0 && tues.length === 0;
@@ -197,7 +222,10 @@ export default function ModalDimensionamentoApto({
 
   return (
     <Modal visible={visivel} transparent animationType="slide">
-      <View style={styles.overlay}>
+      <KeyboardAvoidingView
+        style={styles.overlay}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
         <View style={styles.container}>
           <View style={styles.header}>
             <Text style={styles.tituloHeader}>
@@ -285,7 +313,6 @@ export default function ModalDimensionamentoApto({
                   </View>
                 </View>
 
-                {/* 💡 ESTE BOTÃO TAMBÉM VOLTOU */}
                 <TouchableOpacity
                   style={styles.btnAdd}
                   onPress={handleAddComodo}
@@ -345,7 +372,6 @@ export default function ModalDimensionamentoApto({
                   </View>
                 </View>
 
-                {/* 💡 ESTE AQUI TAMBÉM */}
                 <TouchableOpacity style={styles.btnAdd} onPress={handleAddTue}>
                   <Text style={styles.btnAddText}>+ Adicionar TUE</Text>
                 </TouchableOpacity>
@@ -374,7 +400,7 @@ export default function ModalDimensionamentoApto({
                   style={styles.inputFooter}
                   value={nomeTipologia}
                   onChangeText={setNomeTipologia}
-                  placeholder="Ex: Apto Tipo 1"
+                  placeholder="Ex: Apto Tipo 2, Cobertura..."
                 />
               </View>
               <View style={{ flex: 1 }}>
@@ -388,7 +414,6 @@ export default function ModalDimensionamentoApto({
               </View>
             </View>
 
-            {/* 💡 BOTÃO FINAL RESTAURADO */}
             <TouchableOpacity
               style={[
                 styles.btnFinalizar,
@@ -406,7 +431,7 @@ export default function ModalDimensionamentoApto({
             </TouchableOpacity>
           </View>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
@@ -515,8 +540,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "bold",
   },
-
-  // 💡 ESTILOS DOS BOTÕES RESTAURADOS AQUI EMBAIXO:
   btnAdd: {
     backgroundColor: "#f3f4f6",
     borderWidth: 1,

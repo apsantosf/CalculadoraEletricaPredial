@@ -2,21 +2,22 @@
 import { FontAwesome5 } from "@expo/vector-icons";
 import React, { useState } from "react";
 import {
-    Alert,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 interface ModalCadastroExpressoProps {
   visivel: boolean;
-  isPlanta: boolean; // Se planta estiver ativa, a aba de Apto fica desabilitada
+  isPlanta: boolean;
+  temApartamentos: boolean; // 💡 A NOVA PROPRIEDADE AQUI
   onClose: () => void;
   onSalvar: (novoSetor: any) => void;
 }
@@ -24,6 +25,7 @@ interface ModalCadastroExpressoProps {
 export default function ModalCadastroExpresso({
   visivel,
   isPlanta,
+  temApartamentos,
   onClose,
   onSalvar,
 }: ModalCadastroExpressoProps) {
@@ -31,20 +33,16 @@ export default function ModalCadastroExpresso({
     "Apartamento",
   );
 
-  // Estados comuns
   const [nomeSetor, setNomeSetor] = useState("");
   const [qtdSetor, setQtdSetor] = useState("1");
   const [fasesSetor, setFasesSetor] = useState("2");
 
-  // Estado da Tipologia
   const [potenciaTotalApto, setPotenciaTotalApto] = useState("");
 
-  // Estados da Área Comum
   const [nomeCarga, setNomeCarga] = useState("");
   const [potenciaCarga, setPotenciaCarga] = useState("");
   const [listaCargas, setListaCargas] = useState<any[]>([]);
 
-  // Quando o modal abre, reseta tudo e verifica a trava
   React.useEffect(() => {
     if (visivel) {
       setNomeSetor("");
@@ -122,6 +120,13 @@ export default function ModalCadastroExpresso({
     };
 
     onSalvar(novoSetor);
+
+    setNomeSetor("");
+    if (tabAtiva === "Apartamento") {
+      setPotenciaTotalApto("");
+    } else {
+      setListaCargas([]);
+    }
   };
 
   return (
@@ -163,24 +168,30 @@ export default function ModalCadastroExpresso({
               </TouchableOpacity>
             )}
 
-            <TouchableOpacity
-              style={[styles.tab, tabAtiva === "AreaComum" && styles.tabAtiva]}
-              onPress={() => setTabAtiva("AreaComum")}
-            >
-              <FontAwesome5
-                name="cogs"
-                size={14}
-                color={tabAtiva === "AreaComum" ? "#ffffff" : "#6b7280"}
-              />
-              <Text
+            {/* 💡 A MÁGICA: A aba "Áreas Comuns" só aparece se já tiver apto cadastrado ou se for modo planta! */}
+            {(isPlanta || temApartamentos) && (
+              <TouchableOpacity
                 style={[
-                  styles.tabText,
-                  tabAtiva === "AreaComum" && styles.tabTextAtiva,
+                  styles.tab,
+                  tabAtiva === "AreaComum" && styles.tabAtiva,
                 ]}
+                onPress={() => setTabAtiva("AreaComum")}
               >
-                Áreas Comuns
-              </Text>
-            </TouchableOpacity>
+                <FontAwesome5
+                  name="cogs"
+                  size={14}
+                  color={tabAtiva === "AreaComum" ? "#ffffff" : "#6b7280"}
+                />
+                <Text
+                  style={[
+                    styles.tabText,
+                    tabAtiva === "AreaComum" && styles.tabTextAtiva,
+                  ]}
+                >
+                  Áreas Comuns
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false}>
