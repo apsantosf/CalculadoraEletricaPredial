@@ -17,7 +17,7 @@ import {
 interface ModalCadastroExpressoProps {
   visivel: boolean;
   isPlanta: boolean;
-  temApartamentos: boolean; // 💡 A NOVA PROPRIEDADE AQUI
+  temApartamentos: boolean;
   onClose: () => void;
   onSalvar: (novoSetor: any) => void;
 }
@@ -57,14 +57,29 @@ export default function ModalCadastroExpresso({
   }, [visivel, isPlanta]);
 
   const adicionarCargaNaLista = () => {
-    if (!nomeCarga.trim() || !potenciaCarga.trim()) {
-      Alert.alert("Erro", "Preencha o nome e a potência do equipamento.");
+    // 💡 AVISOS EXPLICATIVOS EXRESSO
+    if (!nomeCarga.trim()) {
+      const msg =
+        "Por favor, informe o Nome do Equipamento/Motor (Ex: Bomba Recalque).";
+      Platform.OS === "web"
+        ? window.alert(msg)
+        : Alert.alert("Campo Obrigatório", msg);
       return;
     }
+    const pot = Number(potenciaCarga);
+    if (isNaN(pot) || pot <= 0) {
+      const msg =
+        "A 'Potência (W)' do equipamento precisa ser um número maior que zero.";
+      Platform.OS === "web"
+        ? window.alert(msg)
+        : Alert.alert("Campo Obrigatório", msg);
+      return;
+    }
+
     const novaCarga = {
       id: Date.now().toString(),
       nome: nomeCarga,
-      potencia: Number(potenciaCarga),
+      potencia: pot,
       unidadeMedida: "W",
       quantidade: 1,
     };
@@ -78,33 +93,43 @@ export default function ModalCadastroExpresso({
   };
 
   const salvarSetor = () => {
+    // 💡 AVISOS DO SALVAMENTO GLOBAL
     if (!nomeSetor.trim()) {
-      Alert.alert("Erro", "Dê um nome para a tipologia ou área.");
+      const msg = `Para salvar, informe o Nome da ${tabAtiva === "Apartamento" ? "Tipologia" : "Área"} lá no topo da tela (Ex: Apto Padrão, Casa de Máquinas).`;
+      Platform.OS === "web"
+        ? window.alert(msg)
+        : Alert.alert("Falta o Nome", msg);
       return;
     }
 
     let cargasFinais = [];
 
     if (tabAtiva === "Apartamento") {
-      if (!potenciaTotalApto.trim()) {
-        Alert.alert("Erro", "Informe a Potência Total da unidade.");
+      const potApto = Number(potenciaTotalApto);
+      if (!potenciaTotalApto.trim() || isNaN(potApto) || potApto <= 0) {
+        const msg =
+          "Você esqueceu de informar a 'Potência Total da Unidade (W)'. Este valor precisa ser maior que zero.";
+        Platform.OS === "web"
+          ? window.alert(msg)
+          : Alert.alert("Campo Obrigatório", msg);
         return;
       }
       cargasFinais = [
         {
           id: Date.now().toString() + "-total",
           nome: "Carga Total Calculada",
-          potencia: Number(potenciaTotalApto),
+          potencia: potApto,
           unidadeMedida: "W",
           quantidade: 1,
         },
       ];
     } else {
       if (listaCargas.length === 0) {
-        Alert.alert(
-          "Erro",
-          "Adicione pelo menos um equipamento na área comum.",
-        );
+        const msg =
+          "Você precisa adicionar pelo menos 1 Equipamento na lista clicando no botão '+ Adicionar Equipamento' antes de salvar.";
+        Platform.OS === "web"
+          ? window.alert(msg)
+          : Alert.alert("Lista Vazia", msg);
         return;
       }
       cargasFinais = listaCargas;
@@ -168,7 +193,6 @@ export default function ModalCadastroExpresso({
               </TouchableOpacity>
             )}
 
-            {/* 💡 A MÁGICA: A aba "Áreas Comuns" só aparece se já tiver apto cadastrado ou se for modo planta! */}
             {(isPlanta || temApartamentos) && (
               <TouchableOpacity
                 style={[
@@ -198,7 +222,6 @@ export default function ModalCadastroExpresso({
             <Text style={styles.sectionTitle}>
               1. Dados da {tabAtiva === "Apartamento" ? "Tipologia" : "Área"}
             </Text>
-
             <Text style={styles.label}>Nome</Text>
             <TextInput
               style={styles.input}

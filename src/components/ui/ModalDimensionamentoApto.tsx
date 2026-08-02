@@ -112,11 +112,27 @@ export default function ModalDimensionamentoApto({
   const handleAddComodo = () => {
     const numArea = parseFloat(area.replace(",", "."));
     const numPerim = parseFloat(perimetro.replace(",", "."));
-    if (!nomeComodo.trim() || isNaN(numArea) || isNaN(numPerim)) {
-      const msg = "Preencha a área e o perímetro corretamente.";
-      Platform.OS === "web" ? window.alert(msg) : Alert.alert("Atenção", msg);
+
+    // 💡 AVISOS EXPLICATIVOS CÔMODOS
+    if (!nomeComodo.trim()) {
+      const msg =
+        "Você esqueceu de preencher o 'Nome do Ambiente' (Ex: Cozinha, Quarto).";
+      Platform.OS === "web"
+        ? window.alert(msg)
+        : Alert.alert("Campo Vazio", msg);
       return;
     }
+    if (isNaN(numArea) || numArea <= 0) {
+      const msg = "Digite um valor válido para a 'Área (m²)' (Ex: 12).";
+      Platform.OS === "web" ? window.alert(msg) : Alert.alert("Aviso", msg);
+      return;
+    }
+    if (isNaN(numPerim) || numPerim <= 0) {
+      const msg = "Digite um valor válido para o 'Perímetro (m)' (Ex: 14).";
+      Platform.OS === "web" ? window.alert(msg) : Alert.alert("Aviso", msg);
+      return;
+    }
+
     setComodos((prev) => [
       ...prev,
       {
@@ -133,11 +149,23 @@ export default function ModalDimensionamentoApto({
 
   const handleAddTue = () => {
     const pot = parseFloat(potenciaTue.replace(",", "."));
-    if (!nomeTue.trim() || isNaN(pot) || pot <= 0) {
-      const msg = "Preencha o nome e a potência correta do equipamento.";
-      Platform.OS === "web" ? window.alert(msg) : Alert.alert("Atenção", msg);
+
+    // 💡 AVISOS EXPLICATIVOS TUES
+    if (!nomeTue.trim()) {
+      const msg =
+        "Você esqueceu de dar um 'Nome' para o equipamento (Ex: Chuveiro).";
+      Platform.OS === "web"
+        ? window.alert(msg)
+        : Alert.alert("Campo Vazio", msg);
       return;
     }
+    if (isNaN(pot) || pot <= 0) {
+      const msg =
+        "A 'Potência (W)' do equipamento precisa ser um número maior que zero.";
+      Platform.OS === "web" ? window.alert(msg) : Alert.alert("Aviso", msg);
+      return;
+    }
+
     setTues((prev) => [
       ...prev,
       { id: Math.random().toString(), nome: nomeTue, potenciaW: pot },
@@ -149,7 +177,7 @@ export default function ModalDimensionamentoApto({
     if (Platform.OS === "web") {
       if (window.confirm(msg)) setComodos(comodos.filter((c) => c.id !== id));
     } else {
-      Alert.alert("Remover Cômodo", msg, [
+      Alert.alert("Remover", msg, [
         { text: "Cancelar", style: "cancel" },
         {
           text: "Remover",
@@ -165,7 +193,7 @@ export default function ModalDimensionamentoApto({
     if (Platform.OS === "web") {
       if (window.confirm(msg)) setTues(tues.filter((t) => t.id !== id));
     } else {
-      Alert.alert("Remover Equipamento", msg, [
+      Alert.alert("Remover", msg, [
         { text: "Cancelar", style: "cancel" },
         {
           text: "Remover",
@@ -177,28 +205,27 @@ export default function ModalDimensionamentoApto({
   };
 
   const handleFinalizar = () => {
+    // 💡 AVISOS EXPLICATIVOS DO SALVAMENTO FINAL
     if (comodos.length === 0 && tues.length === 0) {
       const msg =
-        "Adicione pelo menos um Cômodo ou um Equipamento (TUE) antes de dimensionar.";
-      Platform.OS === "web" ? window.alert(msg) : Alert.alert("Atenção", msg);
+        "Para salvar, você precisa adicionar pelo menos 1 Cômodo ou 1 Equipamento na lista acima clicando no botão '+ Adicionar'.";
+      Platform.OS === "web"
+        ? window.alert(msg)
+        : Alert.alert("Lista Vazia", msg);
       return;
     }
 
     if (!nomeTipologia.trim()) {
       const msg =
-        "Por favor, digite o Nome da Tipologia (Ex: Cobertura, Apto Tipo 2) no rodapé da tela.";
+        "Você precisa dar um 'Nome' para esta Tipologia no rodapé da tela (Ex: Apto 1 Quarto, Cobertura) antes de salvar.";
       Platform.OS === "web"
         ? window.alert(msg)
         : Alert.alert("Falta o Nome", msg);
       return;
     }
 
-    // 🛡️ BLINDAGEM EXTRA: Verifica se a função de salvar chegou corretamente da tela principal
     if (typeof onSalvar !== "function") {
-      Alert.alert(
-        "Erro de Conexão",
-        "A tela não conseguiu se conectar com a função de salvar. Tente reiniciar o aplicativo.",
-      );
+      Alert.alert("Erro interno", "Falha de comunicação. Feche e abra a tela.");
       return;
     }
 
@@ -414,6 +441,7 @@ export default function ModalDimensionamentoApto({
               </View>
             </View>
 
+            {/* 💡 AQUI TIRAMOS O "DISABLED" PARA DEIXAR O AVISO APARECER */}
             <TouchableOpacity
               style={[
                 styles.btnFinalizar,
@@ -421,7 +449,6 @@ export default function ModalDimensionamentoApto({
               ]}
               onPress={handleFinalizar}
               activeOpacity={0.8}
-              disabled={isDesativado}
             >
               <Text style={styles.btnFinalizarText}>
                 {dadosIniciais

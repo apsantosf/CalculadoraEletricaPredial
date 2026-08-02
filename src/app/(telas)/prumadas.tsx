@@ -28,7 +28,6 @@ export default function ScreenPrumadas() {
   const [setorSelecionado, setSetorSelecionado] = useState<string | null>(null);
   const [quantidadeNaPrumada, setQuantidadeNaPrumada] = useState("");
 
-  // 💡 LÓGICA DE SALDO: Calcula quantos apartamentos faltam ser distribuídos
   const saldos = apartamentosDisponiveis.map((apto) => {
     const totalAlocado = prumadas.reduce((acc, prumada) => {
       const unidade = prumada.unidades.find((u) => u.setorId === apto.id);
@@ -40,29 +39,48 @@ export default function ScreenPrumadas() {
     };
   });
 
-  // Verifica se todos os apartamentos cadastrados já foram 100% alocados
   const todosAlocados = saldos.length > 0 && saldos.every((s) => s.saldo === 0);
   const setorSelecionadoDados = saldos.find((s) => s.id === setorSelecionado);
 
   const handleSalvarPrumada = () => {
-    if (!nomePrumada || !setorSelecionado || !quantidadeNaPrumada) {
+    // 💡 AVISOS INTELIGENTES EM DETALHE
+    if (!nomePrumada.trim()) {
       const msg =
-        "Preencha o nome da prumada, selecione uma unidade e informe a quantidade.";
-      Platform.OS === "web" ? window.alert(msg) : alert(msg);
+        "Digite um 'Nome' para a Prumada (Ex: Prumada Leste, Prumada 1).";
+      Platform.OS === "web"
+        ? window.alert(msg)
+        : Alert.alert("Campo Obrigatório", msg);
+      return;
+    }
+    if (!setorSelecionado) {
+      const msg =
+        "Selecione uma 'Unidade' disponível na lista de opções para vincular à prumada.";
+      Platform.OS === "web"
+        ? window.alert(msg)
+        : Alert.alert("Falta a Unidade", msg);
+      return;
+    }
+    if (!quantidadeNaPrumada.trim()) {
+      const msg =
+        "Informe a 'Quantidade' de apartamentos desta tipologia que ficarão nesta prumada.";
+      Platform.OS === "web"
+        ? window.alert(msg)
+        : Alert.alert("Campo Obrigatório", msg);
       return;
     }
 
     const qtd = parseInt(quantidadeNaPrumada);
     if (isNaN(qtd) || qtd <= 0) {
-      const msg = "Informe uma quantidade válida maior que zero.";
-      Platform.OS === "web" ? window.alert(msg) : alert(msg);
+      const msg = "A quantidade deve ser um número válido e maior que zero.";
+      Platform.OS === "web"
+        ? window.alert(msg)
+        : Alert.alert("Valor Inválido", msg);
       return;
     }
 
-    // 💡 TRAVA DE SEGURANÇA: Impede alocar mais do que existe no prédio
     if (setorSelecionadoDados && qtd > setorSelecionadoDados.saldo) {
-      const msg = `Erro: Você só tem mais ${setorSelecionadoDados.saldo}x "${setorSelecionadoDados.nome}" disponíveis para alocar.`;
-      Platform.OS === "web" ? window.alert(msg) : alert(msg);
+      const msg = `Erro: Você tentou alocar ${qtd}, mas só tem mais ${setorSelecionadoDados.saldo}x "${setorSelecionadoDados.nome}" disponíveis.`;
+      Platform.OS === "web" ? window.alert(msg) : Alert.alert("Atenção", msg);
       return;
     }
 
@@ -184,7 +202,9 @@ export default function ScreenPrumadas() {
           <TouchableOpacity
             style={[
               styles.botaoSalvar,
-              (!setorSelecionado || !quantidadeNaPrumada) && { opacity: 0.5 },
+              (!nomePrumada || !setorSelecionado || !quantidadeNaPrumada) && {
+                opacity: 0.5,
+              },
             ]}
             onPress={handleSalvarPrumada}
             activeOpacity={0.8}
@@ -220,7 +240,6 @@ export default function ScreenPrumadas() {
           )}
         </View>
 
-        {/* 💡 NOVO: BOTÃO DE FINALIZAÇÃO CONDICIONAL */}
         <View style={styles.finalizacaoContainer}>
           <TouchableOpacity
             style={[
@@ -366,8 +385,6 @@ const styles = StyleSheet.create({
   },
   itemDetalhe: { fontSize: 14, color: "#6b7280" },
   botaoExcluir: { padding: 10 },
-
-  /* ESTILOS DO BOTÃO FINALIZAR */
   finalizacaoContainer: {
     marginTop: 30,
     marginBottom: 20,
