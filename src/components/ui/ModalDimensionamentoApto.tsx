@@ -246,8 +246,11 @@ export default function ModalDimensionamentoApto({
 
   return (
     <Modal visible={visivel} transparent animationType="slide">
-      {/* 💡 AQUI ESTÁ A CORREÇÃO DO TECLADO: behavior="padding" para Android e iOS */}
-      <KeyboardAvoidingView style={styles.overlay} behavior="padding">
+      {/* 💡 CORREÇÃO 1: Voltamos o behavior para o ideal do Android (height) */}
+      <KeyboardAvoidingView
+        style={styles.overlay}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
         <View style={styles.container}>
           <View style={styles.header}>
             <Text style={styles.tituloHeader}>
@@ -467,12 +470,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  /* 💡 Ajuste de altura para maxHeight para a tela se espremer sem quebrar ao abrir o teclado */
+  /* 💡 CORREÇÃO 2: Voltamos o height para 85% para o modal não esmagar o conteúdo */
   container: {
     backgroundColor: "#fff",
     width: "95%",
     maxWidth: 450,
-    maxHeight: "90%",
+    height: "85%",
     borderRadius: 16,
     overflow: "hidden",
   },
