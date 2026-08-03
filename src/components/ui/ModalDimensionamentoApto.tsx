@@ -246,10 +246,9 @@ export default function ModalDimensionamentoApto({
 
   return (
     <Modal visible={visivel} transparent animationType="slide">
-      {/* 💡 CORREÇÃO 1: Voltamos o behavior para o ideal do Android (height) */}
       <KeyboardAvoidingView
         style={styles.overlay}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        behavior={Platform.OS === "ios" ? "padding" : "padding"}
       >
         <View style={styles.container}>
           <View style={styles.header}>
@@ -418,30 +417,37 @@ export default function ModalDimensionamentoApto({
                 ))}
               </View>
             )}
-          </ScrollView>
 
-          <View style={styles.footer}>
-            <View style={styles.formRow}>
-              <View style={{ flex: 2, marginRight: 8 }}>
-                <Text style={styles.labelFooter}>Nome da Tipologia</Text>
-                <TextInput
-                  style={styles.inputFooter}
-                  value={nomeTipologia}
-                  onChangeText={setNomeTipologia}
-                  placeholder="Ex: Apto Tipo 2, Cobertura..."
-                />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.labelFooter}>Qtd no Prédio</Text>
-                <TextInput
-                  style={styles.inputFooter}
-                  value={quantidadeTipologia}
-                  onChangeText={setQuantidadeTipologia}
-                  keyboardType="numeric"
-                />
+            {/* 💡 CORREÇÃO AQUI: Bloco "Nome e Quantidade" movido para dentro da área que rola */}
+            <View style={styles.blocoTipologia}>
+              <Text style={styles.tituloBlocoTipologia}>
+                3. Dados Finais da Tipologia
+              </Text>
+              <View style={styles.formRow}>
+                <View style={{ flex: 2, marginRight: 8 }}>
+                  <Text style={styles.label}>Nome da Tipologia</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={nomeTipologia}
+                    onChangeText={setNomeTipologia}
+                    placeholder="Ex: Apto Tipo 2..."
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.label}>Qtd no Prédio</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={quantidadeTipologia}
+                    onChangeText={setQuantidadeTipologia}
+                    keyboardType="numeric"
+                  />
+                </View>
               </View>
             </View>
+          </ScrollView>
 
+          {/* O rodapé agora abriga APENAS o botão principal */}
+          <View style={styles.footer}>
             <TouchableOpacity
               style={[
                 styles.btnFinalizar,
@@ -470,7 +476,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  /* 💡 CORREÇÃO 2: Voltamos o height para 85% para o modal não esmagar o conteúdo */
   container: {
     backgroundColor: "#fff",
     width: "95%",
@@ -547,26 +552,27 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   itemText: { fontSize: 14, color: "#374151", fontWeight: "500" },
+
+  /* 💡 Estilos do novo bloco que agora rola junto com o conteúdo */
+  blocoTipologia: {
+    marginTop: 10,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderColor: "#e5e7eb",
+    marginBottom: 20,
+  },
+  tituloBlocoTipologia: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: "#1f2937",
+    marginBottom: 10,
+  },
+
   footer: {
     padding: 16,
     borderTopWidth: 1,
     borderColor: "#e5e7eb",
     backgroundColor: "#f9fafb",
-  },
-  labelFooter: {
-    fontSize: 12,
-    fontWeight: "bold",
-    color: "#1f2937",
-    marginBottom: 4,
-  },
-  inputFooter: {
-    backgroundColor: "#fff",
-    borderWidth: 1,
-    borderColor: "#d1d5db",
-    borderRadius: 8,
-    padding: 10,
-    fontSize: 14,
-    fontWeight: "bold",
   },
   btnAdd: {
     backgroundColor: "#f3f4f6",
@@ -583,7 +589,6 @@ const styles = StyleSheet.create({
     padding: 14,
     borderRadius: 8,
     alignItems: "center",
-    marginTop: 8,
   },
   btnFinalizarText: { color: "#fff", fontWeight: "bold", fontSize: 16 },
 });
