@@ -57,7 +57,6 @@ export default function ModalCadastroExpresso({
   }, [visivel, isPlanta]);
 
   const adicionarCargaNaLista = () => {
-    // 💡 AVISOS EXPLICATIVOS EXRESSO
     if (!nomeCarga.trim()) {
       const msg =
         "Por favor, informe o Nome do Equipamento/Motor (Ex: Bomba Recalque).";
@@ -93,7 +92,6 @@ export default function ModalCadastroExpresso({
   };
 
   const salvarSetor = () => {
-    // 💡 AVISOS DO SALVAMENTO GLOBAL
     if (!nomeSetor.trim()) {
       const msg = `Para salvar, informe o Nome da ${tabAtiva === "Apartamento" ? "Tipologia" : "Área"} lá no topo da tela (Ex: Apto Padrão, Casa de Máquinas).`;
       Platform.OS === "web"
@@ -156,10 +154,8 @@ export default function ModalCadastroExpresso({
 
   return (
     <Modal visible={visivel} animationType="slide" transparent>
-      <KeyboardAvoidingView
-        style={styles.modalOverlay}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-      >
+      {/* 💡 AQUI ESTÁ A CORREÇÃO DO TECLADO */}
+      <KeyboardAvoidingView style={styles.modalOverlay} behavior="padding">
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Cadastro Expresso</Text>
@@ -218,7 +214,10 @@ export default function ModalCadastroExpresso({
             )}
           </View>
 
-          <ScrollView showsVerticalScrollIndicator={false}>
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
             <Text style={styles.sectionTitle}>
               1. Dados da {tabAtiva === "Apartamento" ? "Tipologia" : "Área"}
             </Text>

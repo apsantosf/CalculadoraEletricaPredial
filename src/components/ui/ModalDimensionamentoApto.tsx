@@ -113,7 +113,6 @@ export default function ModalDimensionamentoApto({
     const numArea = parseFloat(area.replace(",", "."));
     const numPerim = parseFloat(perimetro.replace(",", "."));
 
-    // 💡 AVISOS EXPLICATIVOS CÔMODOS
     if (!nomeComodo.trim()) {
       const msg =
         "Você esqueceu de preencher o 'Nome do Ambiente' (Ex: Cozinha, Quarto).";
@@ -150,7 +149,6 @@ export default function ModalDimensionamentoApto({
   const handleAddTue = () => {
     const pot = parseFloat(potenciaTue.replace(",", "."));
 
-    // 💡 AVISOS EXPLICATIVOS TUES
     if (!nomeTue.trim()) {
       const msg =
         "Você esqueceu de dar um 'Nome' para o equipamento (Ex: Chuveiro).";
@@ -205,7 +203,6 @@ export default function ModalDimensionamentoApto({
   };
 
   const handleFinalizar = () => {
-    // 💡 AVISOS EXPLICATIVOS DO SALVAMENTO FINAL
     if (comodos.length === 0 && tues.length === 0) {
       const msg =
         "Para salvar, você precisa adicionar pelo menos 1 Cômodo ou 1 Equipamento na lista acima clicando no botão '+ Adicionar'.";
@@ -249,10 +246,8 @@ export default function ModalDimensionamentoApto({
 
   return (
     <Modal visible={visivel} transparent animationType="slide">
-      <KeyboardAvoidingView
-        style={styles.overlay}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-      >
+      {/* 💡 AQUI ESTÁ A CORREÇÃO DO TECLADO: behavior="padding" para Android e iOS */}
+      <KeyboardAvoidingView style={styles.overlay} behavior="padding">
         <View style={styles.container}>
           <View style={styles.header}>
             <Text style={styles.tituloHeader}>
@@ -292,7 +287,10 @@ export default function ModalDimensionamentoApto({
             </TouchableOpacity>
           </View>
 
-          <ScrollView style={styles.content}>
+          <ScrollView
+            style={styles.content}
+            keyboardShouldPersistTaps="handled"
+          >
             {abaAtiva === "comodos" && (
               <View>
                 <Text style={styles.label}>Sugestões de Ambientes</Text>
@@ -441,7 +439,6 @@ export default function ModalDimensionamentoApto({
               </View>
             </View>
 
-            {/* 💡 AQUI TIRAMOS O "DISABLED" PARA DEIXAR O AVISO APARECER */}
             <TouchableOpacity
               style={[
                 styles.btnFinalizar,
@@ -470,11 +467,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
+  /* 💡 Ajuste de altura para maxHeight para a tela se espremer sem quebrar ao abrir o teclado */
   container: {
     backgroundColor: "#fff",
     width: "95%",
     maxWidth: 450,
-    height: "85%",
+    maxHeight: "90%",
     borderRadius: 16,
     overflow: "hidden",
   },
