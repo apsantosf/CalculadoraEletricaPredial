@@ -1,8 +1,9 @@
 // src/app/_layout.tsx
 import { FontAwesome5, MaterialCommunityIcons } from "@expo/vector-icons";
 import { Slot, usePathname, useRouter } from "expo-router";
+import { useEffect } from "react"; // 💡 IMPORTADO O useEffect AQUI
 import {
-  Alert, // 💡 IMPORTADO O ALERT AQUI
+  Alert,
   LogBox,
   Platform,
   StyleSheet,
@@ -14,7 +15,8 @@ import {
   SafeAreaProvider,
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
-import { DataProvider, useData } from "../context/DataContext"; // 💡 IMPORTAMOS O useData AQUI
+import { DataProvider, useData } from "../context/DataContext";
+import { checarAtualizacao } from "../utils/UpdateHelper"; // 💡 IMPORTADO O HELPER DE ATUALIZAÇÃO AQUI
 
 LogBox.ignoreLogs(["The Flipper native module is not available"]);
 
@@ -23,10 +25,8 @@ function BarraInferiorFixa() {
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
 
-  // 💡 TRAZEMOS AS VARIÁVEIS DO CONTEXTO
   const { nomeProjeto, numeroAndares, tensao } = useData();
 
-  // 💡 LÓGICA DE BLOQUEIO: Retorna TRUE se faltar algum dado
   const projetoIncompleto =
     !nomeProjeto.trim() || !numeroAndares.trim() || !tensao;
 
@@ -50,12 +50,11 @@ function BarraInferiorFixa() {
       <View style={styles.tabBar}>
         {tabs.map((tab) => {
           const isActive = pathname === tab.key;
-          // 💡 SE ESTIVER INCOMPLETO E NÃO FOR A ABA INÍCIO, ESTÁ BLOQUEADO
           const isDisabled = projetoIncompleto && tab.key !== "/";
 
           const activeColor = "#2563eb";
           const inactiveColor = "#6b7280";
-          const disabledColor = "#d1d5db"; // Cinza bem claro para os bloqueados
+          const disabledColor = "#d1d5db";
 
           const color = isActive
             ? activeColor
@@ -112,6 +111,11 @@ function LayoutRaiz() {
 }
 
 export default function RootLayout() {
+  // 💡 GATILHO DISPARADO ASSIM QUE O APP ABRE
+  useEffect(() => {
+    checarAtualizacao();
+  }, []);
+
   return (
     <SafeAreaProvider>
       <LayoutRaiz />
