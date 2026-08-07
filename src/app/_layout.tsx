@@ -1,7 +1,8 @@
 // src/app/_layout.tsx
 import { FontAwesome5, MaterialCommunityIcons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage"; // 💡 IMPORTADO O STORAGE
 import { Slot, usePathname, useRouter } from "expo-router";
-import { useEffect } from "react"; // 💡 IMPORTADO O useEffect AQUI
+import { useEffect, useState } from "react";
 import {
   Alert,
   LogBox,
@@ -15,8 +16,9 @@ import {
   SafeAreaProvider,
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
+import ModalTermoResponsabilidade from "../components/ui/ModalTermoResponsabilidade"; // 💡 IMPORTADO O MODAL
 import { DataProvider, useData } from "../context/DataContext";
-import { checarAtualizacao } from "../utils/UpdateHelper"; // 💡 IMPORTADO O HELPER DE ATUALIZAÇÃO AQUI
+import { checarAtualizacao } from "../utils/UpdateHelper";
 
 LogBox.ignoreLogs(["The Flipper native module is not available"]);
 
@@ -111,14 +113,45 @@ function LayoutRaiz() {
 }
 
 export default function RootLayout() {
-  // 💡 GATILHO DISPARADO ASSIM QUE O APP ABRE
+  const [exibirTermo, setExibirTermo] = useState(false);
+
   useEffect(() => {
     checarAtualizacao();
+    verificarAceiteTermo();
   }, []);
+
+  // 💡 LÓGICA DE CHECAGEM DO TERMO
+  const verificarAceiteTermo = async () => {
+    try {
+      const aceitou = await AsyncStorage.getItem(
+        "@eletrica_predial:termo_aceito",
+      );
+      if (aceitou !== "true") {
+        setExibirTermo(true);
+      }
+    } catch (error) {
+      console.log("Erro ao verificar termo de responsabilidade:", error);
+    }
+  };
+
+  // 💡 LÓGICA AO CLICAR EM CONCORDAR
+  const handleAceitarTermo = async () => {
+    try {
+      await AsyncStorage.setItem("@eletrica_predial:termo_aceito", "true");
+      setExibirTermo(false);
+    } catch (error) {
+      console.log("Erro ao salvar aceite do termo:", error);
+    }
+  };
 
   return (
     <SafeAreaProvider>
       <LayoutRaiz />
+      {/* 💡 MODAL DE SEGURANÇA EXIBIDO APENAS NA PRIMEIRA VEZ */}
+      <ModalTermoResponsabilidade
+        visivel={exibirTermo}
+        onAceitar={handleAceitarTermo}
+      />
     </SafeAreaProvider>
   );
 }
