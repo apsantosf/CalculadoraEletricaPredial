@@ -111,7 +111,9 @@ export default function ScreenInicio() {
               <TextInput
                 style={styles.input}
                 value={numeroAndares}
-                onChangeText={setNumeroAndares}
+                onChangeText={(text) =>
+                  setNumeroAndares(text.replace(/[^0-9]/g, ""))
+                }
                 keyboardType="numeric"
                 placeholder="Ex: 10"
                 placeholderTextColor="#9ca3af"

@@ -320,20 +320,26 @@ export default function ModalDimensionamentoApto({
                 <View style={styles.formRow}>
                   <View style={{ flex: 1, marginRight: 8 }}>
                     <Text style={styles.label}>Área (m²)</Text>
+                    {/* 💡 FILTRO APLICADO AQUI: Permite apenas números, ponto e vírgula */}
                     <TextInput
                       style={styles.input}
                       value={area}
-                      onChangeText={setArea}
+                      onChangeText={(text) =>
+                        setArea(text.replace(/[^0-9.,]/g, ""))
+                      }
                       keyboardType="numeric"
                       placeholder="Ex: 12"
                     />
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.label}>Perímetro (m)</Text>
+                    {/* 💡 FILTRO APLICADO AQUI */}
                     <TextInput
                       style={styles.input}
                       value={perimetro}
-                      onChangeText={setPerimetro}
+                      onChangeText={(text) =>
+                        setPerimetro(text.replace(/[^0-9.,]/g, ""))
+                      }
                       keyboardType="numeric"
                       placeholder="Ex: 14"
                     />
@@ -390,10 +396,13 @@ export default function ModalDimensionamentoApto({
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.label}>Potência (W)</Text>
+                    {/* 💡 FILTRO APLICADO AQUI */}
                     <TextInput
                       style={styles.input}
                       value={potenciaTue}
-                      onChangeText={setPotenciaTue}
+                      onChangeText={(text) =>
+                        setPotenciaTue(text.replace(/[^0-9.,]/g, ""))
+                      }
                       keyboardType="numeric"
                     />
                   </View>
@@ -418,7 +427,6 @@ export default function ModalDimensionamentoApto({
               </View>
             )}
 
-            {/* 💡 CORREÇÃO AQUI: Bloco "Nome e Quantidade" movido para dentro da área que rola */}
             <View style={styles.blocoTipologia}>
               <Text style={styles.tituloBlocoTipologia}>
                 3. Dados Finais da Tipologia
@@ -435,10 +443,13 @@ export default function ModalDimensionamentoApto({
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.label}>Qtd no Prédio</Text>
+                  {/* 💡 FILTRO APLICADO AQUI: Permite APENAS números inteiros */}
                   <TextInput
                     style={styles.input}
                     value={quantidadeTipologia}
-                    onChangeText={setQuantidadeTipologia}
+                    onChangeText={(text) =>
+                      setQuantidadeTipologia(text.replace(/[^0-9]/g, ""))
+                    }
                     keyboardType="numeric"
                   />
                 </View>
@@ -446,7 +457,6 @@ export default function ModalDimensionamentoApto({
             </View>
           </ScrollView>
 
-          {/* O rodapé agora abriga APENAS o botão principal */}
           <View style={styles.footer}>
             <TouchableOpacity
               style={[
@@ -552,8 +562,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   itemText: { fontSize: 14, color: "#374151", fontWeight: "500" },
-
-  /* 💡 Estilos do novo bloco que agora rola junto com o conteúdo */
   blocoTipologia: {
     marginTop: 10,
     paddingTop: 16,
@@ -567,7 +575,6 @@ const styles = StyleSheet.create({
     color: "#1f2937",
     marginBottom: 10,
   },
-
   footer: {
     padding: 16,
     borderTopWidth: 1,

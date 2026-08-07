@@ -154,8 +154,10 @@ export default function ModalCadastroExpresso({
 
   return (
     <Modal visible={visivel} animationType="slide" transparent>
-      {/* 💡 AQUI ESTÁ A CORREÇÃO DO TECLADO */}
-      <KeyboardAvoidingView style={styles.modalOverlay} behavior="padding">
+      <KeyboardAvoidingView
+        style={styles.modalOverlay}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Cadastro Expresso</Text>
@@ -236,20 +238,26 @@ export default function ModalCadastroExpresso({
             <View style={styles.row}>
               <View style={styles.col}>
                 <Text style={styles.label}>Qtd. Prédio</Text>
+                {/* 💡 FILTRO APLICADO AQUI: Apenas inteiros */}
                 <TextInput
                   style={styles.input}
                   keyboardType="numeric"
                   value={qtdSetor}
-                  onChangeText={setQtdSetor}
+                  onChangeText={(text) =>
+                    setQtdSetor(text.replace(/[^0-9]/g, ""))
+                  }
                 />
               </View>
               <View style={styles.col}>
                 <Text style={styles.label}>Fases (Ramal)</Text>
+                {/* 💡 FILTRO APLICADO AQUI: Apenas inteiros */}
                 <TextInput
                   style={styles.input}
                   keyboardType="numeric"
                   value={fasesSetor}
-                  onChangeText={setFasesSetor}
+                  onChangeText={(text) =>
+                    setFasesSetor(text.replace(/[^0-9]/g, ""))
+                  }
                 />
               </View>
             </View>
@@ -260,12 +268,15 @@ export default function ModalCadastroExpresso({
                   2. Carga Total (Calculada)
                 </Text>
                 <Text style={styles.label}>Potência Total da Unidade (W)</Text>
+                {/* 💡 FILTRO APLICADO AQUI: Permite números e decimais */}
                 <TextInput
                   style={styles.inputDestaque}
                   placeholder="Ex: 15000"
                   keyboardType="numeric"
                   value={potenciaTotalApto}
-                  onChangeText={setPotenciaTotalApto}
+                  onChangeText={(text) =>
+                    setPotenciaTotalApto(text.replace(/[^0-9.,]/g, ""))
+                  }
                 />
                 <Text style={styles.dicaTexto}>
                   💡 Insira a demanda total já calculada para esta tipologia. Se
@@ -290,12 +301,15 @@ export default function ModalCadastroExpresso({
                   </View>
                   <View style={styles.col}>
                     <Text style={styles.label}>Potência (W)</Text>
+                    {/* 💡 FILTRO APLICADO AQUI: Permite números e decimais */}
                     <TextInput
                       style={styles.input}
                       placeholder="Ex: 2200"
                       keyboardType="numeric"
                       value={potenciaCarga}
-                      onChangeText={setPotenciaCarga}
+                      onChangeText={(text) =>
+                        setPotenciaCarga(text.replace(/[^0-9.,]/g, ""))
+                      }
                     />
                   </View>
                 </View>
